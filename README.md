@@ -121,40 +121,55 @@ Key variables:
 
 ---
 
-## Versioning
+## GitHub Actions — Versioning
 
-Versions follow `x.y.z` with environment suffixes managed by GitHub Actions:
+Enable in repo **Settings → Actions → General → Read and write permissions**.
 
-| Branch    | Format         | Badge  |
-|-----------|----------------|--------|
-| `develop` | `x.y.z-dev.N` | Green  |
-| `staging` | `x.y.z-rc`    | Orange |
-| `main`    | `x.y.z`        | Red    |
+| Branch    | Behaviour                                                        |
+|-----------|------------------------------------------------------------------|
+| `develop` | Increments build counter on every push — e.g. `0.0.1-dev.42`   |
+| `staging` | Bumps patch + `-rc` suffix on PR merge — e.g. `0.0.2-rc`       |
+| `main`    | Bumps minor, clean version on PR merge — e.g. `0.1.0`          |
 
-The workflow auto-increments the dev counter on every push to `develop`, strips the suffix on merge to `staging`, and bumps the minor version on merge to `main`.
+The version is displayed in the topbar environment badge.
 
 ---
 
-## ProxMox Deployment
+## Proxmox LXC Install
 
-Run the host script on your ProxMox node — it walks through container setup interactively and calls the in-container installer automatically:
+Run this **on your Proxmox host** (not inside a container):
 
 ```bash
-bash proxmox/ct/sugarandsnouts.sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/loucas781/Sugar_and_Snouts/develop/proxmox/ct/sugarandsnouts.sh)"
 ```
 
-The installer will:
-1. Install Node.js 20
-2. Clone the appropriate branch
-3. Generate `JWT_SECRET` and `PASSWORD_PEPPER` via `openssl`
-4. Write the `.env` file
-5. Run the database migration
-6. Create and start a systemd service
+The script will:
+1. Present a `whiptail` TUI — choose default or advanced settings (CPU, RAM, disk, network, environment, admin credentials)
+2. Download a Debian 12 template automatically if one isn't already present
+3. Create and start the LXC container
+4. Push the in-container install script and run it — installs Node.js 20, clones the repo, writes `.env`, runs migrations, and starts the `sugarandsnouts` systemd service
+5. Print the app URL when complete
 
-To update the app after deployment:
+---
+
+## Updating
+
+Once installed, an `update.sh` script is placed at `/opt/sugarandsnouts/update.sh` inside the container. To update from your **Proxmox host**:
 
 ```bash
-/opt/sugarandsnouts/update.sh
+pct exec <CTID> -- bash /opt/sugarandsnouts/update.sh
+```
+
+Replace `<CTID>` with your container ID (e.g. `100`). The update script will:
+1. Pull the latest code from the current branch
+2. Run `npm install` to pick up any new dependencies
+3. Run database migrations (additive only — no data loss)
+4. Restart the `sugarandsnouts` systemd service
+
+You can also run it directly if you have a shell inside the container:
+
+```bash
+bash /opt/sugarandsnouts/update.sh
 ```
 
 ---
