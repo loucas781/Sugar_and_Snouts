@@ -13,7 +13,7 @@ async function initVersionTag(el) {
     const devNum = isDev ? v.split('-dev.')[1] : null
     const tag    = isDev ? `v${base}-dev.${devNum}` : isRC ? `v${base}-rc` : `v${base}`
     const cls    = isDev ? 'badge-dev' : isRC ? 'badge-rc' : 'badge-prod'
-    el.innerHTML = `Sugar & Snouts &middot; <span class="version-tag ${cls}">${env}</span> &middot; ${tag}`
+    el.innerHTML = `<a href="/admin/" style="text-decoration:none;color:inherit">Sugar &amp; Snouts &middot; <span class="version-tag ${cls}">${env}</span> &middot; ${tag}</a>`
   } catch { /* no-op */ }
 }
 
@@ -248,9 +248,24 @@ function renderOrderSummary() {
     </div>`
 }
 
+// ── Admin nav link (shown only when authenticated) ────────────────────────────
+async function initAdminLink() {
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'same-origin' })
+    if (!res.ok) return
+    const nav = document.querySelector('.navbar-nav')
+    if (!nav) return
+    const li = document.createElement('li')
+    li.className = 'nav-item ms-lg-1'
+    li.innerHTML = '<a class="nav-link" href="/admin/dashboard">Admin</a>'
+    nav.appendChild(li)
+  } catch { /* not authenticated or no nav — no-op */ }
+}
+
 // ── Init on DOM ready ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initVersionTag(document.getElementById('versionTag'))
   initCartDrawer()
   initOrderModal()
+  initAdminLink()
 })

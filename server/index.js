@@ -157,8 +157,8 @@ app.get('/shop.html',        (req, res) => res.sendFile(pub('shop.html')))
 app.get('/contact',          (req, res) => res.sendFile(pub('contact.html')))
 app.get('/contact.html',     (req, res) => res.sendFile(pub('contact.html')))
 app.get('/admin',            (req, res) => res.redirect('/admin/'))
-app.get('/admin/',           (req, res) => res.sendFile(pub('admin/login.html')))
-app.get('/admin/dashboard',  (req, res) => res.sendFile(pub('admin/dashboard.html')))
+app.get('/admin/',           (req, res) => { res.set('X-Robots-Tag', 'noindex, nofollow'); res.sendFile(pub('admin/login.html')) })
+app.get('/admin/dashboard',  (req, res) => { res.set('X-Robots-Tag', 'noindex, nofollow'); res.sendFile(pub('admin/dashboard.html')) })
 
 // ─── 404 ──────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
