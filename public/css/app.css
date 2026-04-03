@@ -85,16 +85,15 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
   font-weight: 700;
 }
 
-/* ── Version footer tag (matches ForgeShift / ForgeTrack) ─────────────────── */
+/* ── Version / env badge (matches ForgeShift / ForgeTrack) ──────────────────── */
 .version-tag {
-  font-family: 'Courier New', monospace;
-  font-size: .72rem;
-  opacity: .65;
-  letter-spacing: .03em;
+  font-size: 11px; font-weight: 800; padding: 3px 10px;
+  border-radius: 20px; text-transform: uppercase; letter-spacing: .04em;
+  color: #fff;
 }
-.badge-dev  { color: #059669; }
-.badge-rc   { color: #d97706; }
-.badge-prod { color: #dc2626; }
+.badge-dev  { background: #6554c0; }
+.badge-rc   { background: #d97706; }
+.badge-prod { background: #059669; }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 .btn-sns-primary {
