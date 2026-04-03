@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Contact Sugar & Snouts — Get in touch with us">
+  <link rel="shortcut icon" type="image/jpg" href="/favicon.jpg">
+  <link rel="stylesheet" href="/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/app.css">
+  <link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT&family=Pacifico&display=swap" rel="stylesheet">
+  <title>Contact — Sugar & Snouts</title>
+  <style>
+    body { background: var(--cream); }
+    .contact-hero { background: linear-gradient(135deg, var(--blue) 0%, var(--pink) 100%); padding: 3.5rem 0 2.5rem; text-align: center; }
+    .contact-hero h1 { font-family: 'Pacifico', cursive; font-size: clamp(2rem, 5vw, 3rem); color: var(--dark); }
+    .contact-hero p  { color: rgba(35,35,35,.7); font-size: 1.05rem; }
+    .contact-card { background: white; border-radius: 20px; box-shadow: var(--shadow-md); padding: 2.5rem; max-width: 600px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg sns-nav">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="/">
+      <img src="/favicon.jpg" alt="Logo">
+      <span>Sugar & Snouts</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav ms-auto align-items-center gap-1">
+        <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="/shop">Shop</a></li>
+        <li class="nav-item"><a class="nav-link active" href="/contact">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="contact-hero">
+  <div class="container">
+    <h1>Get In Touch 💌</h1>
+    <p>Questions, custom orders, or just want to say hello? We'd love to hear from you!</p>
+  </div>
+</div>
+
+<div class="container py-5">
+  <div class="contact-card">
+    <div id="contactAlert" style="display:none"></div>
+
+    <form id="contactForm">
+      <div class="sns-form-group">
+        <label class="sns-label">Your Name *</label>
+        <input type="text" name="name" class="sns-input" required placeholder="Jane Smith" maxlength="100">
+      </div>
+      <div class="sns-form-group">
+        <label class="sns-label">Email Address *</label>
+        <input type="email" name="email" class="sns-input" required placeholder="jane@example.com">
+      </div>
+      <div class="sns-form-group">
+        <label class="sns-label">Message *</label>
+        <textarea name="message" class="sns-textarea" required placeholder="Tell us what you're looking for…" style="min-height:140px" maxlength="2000"></textarea>
+      </div>
+      <div class="sns-form-group">
+        <label style="display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;font-size:.9rem;color:var(--text-muted)">
+          <input type="checkbox" name="optin" style="margin-top:.2rem;flex-shrink:0">
+          <span>I'm happy to receive updates about products and special offers from Sugar & Snouts.</span>
+        </label>
+      </div>
+      <button type="submit" class="btn-sns-primary w-100" id="contactSubmit">Send Message</button>
+    </form>
+
+    <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #eee;text-align:center">
+      <p style="font-size:.9rem;color:var(--text-muted);margin-bottom:.5rem">You can also find us on Instagram</p>
+      <a href="https://www.instagram.com/sugar_and_snouts" target="_blank" style="font-size:.95rem">@sugar_and_snouts</a>
+    </div>
+  </div>
+</div>
+
+<div class="bloc bgc-7376 d-bloc">
+  <div class="container bloc-lg-lg bloc-md">
+    <div class="row">
+      <div class="col-12 text-center">
+        <div class="row mb-3">
+          <div class="col"><a href="/"       class="a-btn footer-link ltc-6728">Home</a></div>
+          <div class="col"><a href="/shop"    class="a-btn footer-link ltc-6728">Shop</a></div>
+          <div class="col"><a href="/contact" class="a-btn footer-link ltc-6728">Contact</a></div>
+        </div>
+        <div class="divider-h mx-auto footer-divider"></div>
+        <p>Copyright © 2025–<script>document.write(new Date().getFullYear())</script> │ Sugar & Snouts │ All Rights Reserved</p>
+        <p id="versionTag" style="font-size:.75rem;opacity:.5"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/bootstrap.bundle.min.js"></script>
+<script src="/js/app.js"></script>
+<script>
+document.getElementById('contactForm').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const btn   = document.getElementById('contactSubmit')
+  const alert = document.getElementById('contactAlert')
+  btn.disabled = true
+  btn.textContent = 'Sending…'
+  alert.style.display = 'none'
+
+  try {
+    const data = new FormData(e.target)
+    const res = await fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name:    data.get('name'),
+        email:   data.get('email'),
+        message: data.get('message'),
+        optin:   data.get('optin') === 'on'
+      })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Failed to send')
+    alert.className = 'p-3 mb-3 rounded'
+    alert.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:10px;padding:1rem'
+    alert.textContent = '✓ Message sent! We\'ll get back to you soon.'
+    e.target.reset()
+  } catch (err) {
+    alert.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:10px;padding:1rem'
+    alert.textContent = '✗ ' + err.message
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'Send Message'
+  }
+})
+</script>
+</body>
+</html>

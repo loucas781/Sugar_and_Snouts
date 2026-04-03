@@ -1,0 +1,11 @@
+node_modules/
+data/
+uploads/
+.env.development
+.env.staging
+.env.production
+.runtime-overrides.json
+*.db
+*.db-shm
+*.db-wal
+.DS_Store

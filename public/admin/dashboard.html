@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" type="image/jpg" href="/favicon.jpg">
+  <link rel="stylesheet" href="/css/app.css">
+  <link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT&family=Pacifico&display=swap" rel="stylesheet">
+  <title>Dashboard — Sugar & Snouts Admin</title>
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+
+  <!-- ── Sidebar ───────────────────────────────────────────────────────── -->
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="admin-sidebar__brand">
+      <img src="/favicon.jpg" alt="Logo">
+      <span>Sugar & Snouts</span>
+    </div>
+
+    <nav class="admin-sidebar__nav">
+      <button class="admin-nav-item active" data-tab="overview">
+        <span class="nav-icon">📊</span> Overview
+      </button>
+      <button class="admin-nav-item" data-tab="products">
+        <span class="nav-icon">🧁</span> Products
+      </button>
+      <button class="admin-nav-item" data-tab="orders">
+        <span class="nav-icon">📦</span> Orders
+        <span class="admin-nav-badge" id="pendingBadge" style="display:none">0</span>
+      </button>
+      <button class="admin-nav-item" data-tab="messages">
+        <span class="nav-icon">💌</span> Messages
+        <span class="admin-nav-badge" id="unreadBadge" style="display:none">0</span>
+      </button>
+      <button class="admin-nav-item" data-tab="settings">
+        <span class="nav-icon">⚙️</span> Settings
+      </button>
+    </nav>
+
+    <div class="admin-sidebar__footer">
+      <div id="versionTag"></div>
+    </div>
+  </aside>
+
+  <!-- ── Main ──────────────────────────────────────────────────────────── -->
+  <div class="admin-main">
+
+    <!-- Topbar -->
+    <div class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:.8rem">
+        <button class="admin-sidebar-toggle btn btn-sm" id="sidebarToggle" style="border:1px solid #e5e7eb;background:white">☰</button>
+        <span class="admin-topbar__title" id="topbarTitle">Overview</span>
+      </div>
+      <div class="admin-topbar__user">
+        <div class="admin-avatar" id="userInitials">A</div>
+        <span id="userName" style="display:none;font-size:.9rem"></span>
+        <button onclick="doLogout()" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:.85rem">Sign out</button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="admin-content">
+
+      <!-- ── Overview Tab ─────────────────────────────────────────────── -->
+      <div class="admin-tab-pane active" id="tab-overview">
+        <div class="stat-grid" id="statGrid">
+          <div class="stat-card"><div class="stat-card__icon">🧁</div><div class="stat-card__label">Total Products</div><div class="stat-card__value" id="statProducts">—</div></div>
+          <div class="stat-card"><div class="stat-card__icon">✅</div><div class="stat-card__label">Available</div><div class="stat-card__value" id="statAvailable">—</div></div>
+          <div class="stat-card"><div class="stat-card__icon">⭐</div><div class="stat-card__label">Featured</div><div class="stat-card__value" id="statFeatured">—</div></div>
+          <div class="stat-card"><div class="stat-card__icon">📦</div><div class="stat-card__label">Total Orders</div><div class="stat-card__value" id="statOrders">—</div></div>
+          <div class="stat-card"><div class="stat-card__icon">⏳</div><div class="stat-card__label">Pending Orders</div><div class="stat-card__value" id="statPending">—</div></div>
+          <div class="stat-card"><div class="stat-card__icon">💌</div><div class="stat-card__label">Unread Messages</div><div class="stat-card__value" id="statMessages">—</div></div>
+        </div>
+        <div class="admin-panel">
+          <div class="admin-panel__header"><h2>Quick Actions</h2></div>
+          <div class="admin-panel__body" style="display:flex;gap:1rem;flex-wrap:wrap">
+            <button class="btn-primary-admin" onclick="switchTab('products');openAddProduct()">+ Add New Product</button>
+            <button class="btn-secondary-admin" onclick="switchTab('products')">Manage Products</button>
+            <button class="btn-secondary-admin" onclick="switchTab('orders')">View Orders</button>
+            <button class="btn-secondary-admin" onclick="switchTab('messages')">Check Messages</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Products Tab ─────────────────────────────────────────────── -->
+      <div class="admin-tab-pane" id="tab-products">
+        <div class="admin-panel">
+          <div class="admin-panel__header">
+            <h2>Products</h2>
+            <button class="btn-primary-admin" onclick="openAddProduct()">+ Add Product</button>
+          </div>
+          <div class="admin-panel__body">
+            <!-- Category quick-filter -->
+            <div class="admin-tabs" id="productTabFilter">
+              <button class="admin-tab active" data-pcat="">All</button>
+              <button class="admin-tab" data-pcat="cookies">Cookies</button>
+              <button class="admin-tab" data-pcat="cupcakes">Cupcakes</button>
+              <button class="admin-tab" data-pcat="woof_treats">Woof Treats</button>
+              <button class="admin-tab" data-pcat="pur_treats">Pur Treats</button>
+              <button class="admin-tab" data-pcat="other">Other</button>
+            </div>
+            <div class="sns-spinner" id="productsSpinner"></div>
+            <div class="admin-product-grid" id="productGrid" style="display:none"></div>
+            <div id="productEmpty" style="display:none;text-align:center;padding:3rem;color:var(--text-muted)">
+              <div style="font-size:3rem;margin-bottom:1rem">🧁</div>
+              <p>No products yet. Add your first product!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Orders Tab ───────────────────────────────────────────────── -->
+      <div class="admin-tab-pane" id="tab-orders">
+        <div class="admin-panel">
+          <div class="admin-panel__header">
+            <h2>Orders</h2>
+            <select class="admin-select-field" id="orderStatusFilter" style="max-width:160px">
+              <option value="">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="ready">Ready</option>
+              <option value="collected">Collected</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div class="admin-panel__body">
+            <div class="sns-spinner" id="ordersSpinner"></div>
+            <div class="admin-table-wrap" id="ordersTableWrap" style="display:none">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="ordersBody"></tbody>
+              </table>
+            </div>
+            <div id="ordersEmpty" style="display:none;text-align:center;padding:3rem;color:var(--text-muted)">
+              <div style="font-size:3rem;margin-bottom:1rem">📦</div>
+              <p>No orders yet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Messages Tab ─────────────────────────────────────────────── -->
+      <div class="admin-tab-pane" id="tab-messages">
+        <div class="admin-panel">
+          <div class="admin-panel__header"><h2>Contact Messages</h2></div>
+          <div class="admin-panel__body">
+            <div class="sns-spinner" id="messagesSpinner"></div>
+            <div id="messagesList" style="display:none"></div>
+            <div id="messagesEmpty" style="display:none;text-align:center;padding:3rem;color:var(--text-muted)">
+              <div style="font-size:3rem;margin-bottom:1rem">💌</div>
+              <p>No messages yet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Settings Tab ─────────────────────────────────────────────── -->
+      <div class="admin-tab-pane" id="tab-settings">
+        <div class="admin-panel" style="max-width:480px">
+          <div class="admin-panel__header"><h2>Change Password</h2></div>
+          <div class="admin-panel__body">
+            <div id="pwAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+            <form id="changePasswordForm">
+              <div class="admin-form-group">
+                <label class="admin-label">Current Password</label>
+                <input type="password" name="currentPassword" class="admin-input-field" required autocomplete="current-password">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">New Password</label>
+                <input type="password" name="newPassword" class="admin-input-field" required minlength="8" autocomplete="new-password">
+              </div>
+              <button type="submit" class="btn-primary-admin">Update Password</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="admin-panel" style="max-width:480px;margin-top:1.5rem">
+          <div class="admin-panel__header"><h2>Build Info</h2></div>
+          <div class="admin-panel__body" id="buildInfo" style="font-size:.9rem;color:#374151"></div>
+        </div>
+      </div>
+
+    </div><!-- /admin-content -->
+  </div><!-- /admin-main -->
+</div><!-- /admin-layout -->
+
+<!-- ── Product Modal ──────────────────────────────────────────────────────── -->
+<div class="admin-modal-overlay" id="productModalOverlay">
+  <div class="admin-modal">
+    <div class="admin-modal__header">
+      <h3 id="productModalTitle">Add Product</h3>
+      <button class="modal-close" onclick="closeProductModal()">✕</button>
+    </div>
+    <div class="admin-modal__body">
+      <form id="productForm" enctype="multipart/form-data">
+        <input type="hidden" id="productId" name="productId">
+
+        <!-- Image upload -->
+        <div class="admin-form-group">
+          <label class="admin-label">Product Image</label>
+          <div class="img-upload-area" id="imgUploadArea">
+            <input type="file" name="image" id="imageInput" accept="image/*">
+            <div id="imgPlaceholder">
+              <div style="font-size:2rem;margin-bottom:.5rem">📷</div>
+              <div style="font-size:.9rem;color:#9ca3af">Click or drag to upload an image</div>
+              <div style="font-size:.8rem;color:#d1d5db;margin-top:.3rem">JPG, PNG, WebP up to 8MB</div>
+            </div>
+            <div id="imgPreviewWrap" style="display:none">
+              <img id="imgPreview" class="img-preview" alt="Preview">
+              <button type="button" class="img-preview-remove" onclick="clearImage()">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Basic info -->
+        <div class="row">
+          <div class="col-12">
+            <div class="admin-form-group">
+              <label class="admin-label">Product Name *</label>
+              <input type="text" name="name" id="pName" class="admin-input-field" required placeholder="e.g. Double Chocolate Chip Cookie" maxlength="100">
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="admin-form-group">
+              <label class="admin-label">Description</label>
+              <textarea name="description" id="pDesc" class="admin-textarea-field" placeholder="Tell customers what makes this special…" maxlength="500"></textarea>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="admin-form-group">
+              <label class="admin-label">Category *</label>
+              <select name="category" id="pCategory" class="admin-select-field">
+                <option value="cookies">🍪 Cookies</option>
+                <option value="cupcakes">🧁 Cupcakes</option>
+                <option value="woof_treats">🐾 Woof Treats</option>
+                <option value="pur_treats">🐱 Pur Treats</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="admin-form-group">
+              <label class="admin-label">Sort Order</label>
+              <input type="number" name="sortOrder" id="pSortOrder" class="admin-input-field" value="0" min="0" placeholder="0 = first">
+            </div>
+          </div>
+        </div>
+
+        <!-- Pricing -->
+        <div style="background:#f9fafb;border-radius:10px;padding:1rem;margin-bottom:1rem">
+          <div style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:#374151">💰 Pricing</div>
+          <div class="row">
+            <div class="col-sm-4">
+              <div class="admin-form-group">
+                <label class="admin-label">Price (£) *</label>
+                <input type="number" name="price" id="pPrice" class="admin-input-field" required min="0" step="0.01" placeholder="3.50">
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <div class="admin-form-group">
+                <label class="admin-label">Offer Price (£)</label>
+                <input type="number" name="offerPrice" id="pOfferPrice" class="admin-input-field" min="0" step="0.01" placeholder="2.99">
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <div class="admin-form-group">
+                <label class="admin-label">Offer Expires</label>
+                <input type="datetime-local" name="offerExpiresAt" id="pOfferExpires" class="admin-input-field">
+              </div>
+            </div>
+          </div>
+          <div class="admin-form-group" style="margin-bottom:0">
+            <label class="admin-label">Quantity Limit per Order</label>
+            <input type="number" name="quantityLimit" id="pQtyLimit" class="admin-input-field" min="1" placeholder="Leave blank for no limit">
+          </div>
+        </div>
+
+        <!-- Flags -->
+        <div style="background:#f9fafb;border-radius:10px;padding:1rem;margin-bottom:1rem">
+          <div style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:#374151">🏷️ Display Tags</div>
+          <div class="toggle-row">
+            <span class="toggle-label">Available for purchase</span>
+            <label class="toggle-switch"><input type="checkbox" name="isAvailable" id="pAvailable" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">⭐ Favourite / Featured</span>
+            <label class="toggle-switch"><input type="checkbox" name="isFeatured" id="pFeatured"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">✨ New Arrival</span>
+            <label class="toggle-switch"><input type="checkbox" name="isNew" id="pNew"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">🍰 Recommended</span>
+            <label class="toggle-switch"><input type="checkbox" name="isRecommended" id="pRecommended"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+      </form>
+    </div>
+    <div class="admin-modal__footer">
+      <button class="btn-secondary-admin" onclick="closeProductModal()">Cancel</button>
+      <button class="btn-primary-admin" id="productSaveBtn" onclick="saveProduct()">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Order Detail Modal ─────────────────────────────────────────────────── -->
+<div class="admin-modal-overlay" id="orderModalOverlay">
+  <div class="admin-modal">
+    <div class="admin-modal__header">
+      <h3>Order Details</h3>
+      <button class="modal-close" onclick="closeOrderModal()">✕</button>
+    </div>
+    <div class="admin-modal__body" id="orderModalBody"></div>
+    <div class="admin-modal__footer">
+      <button class="btn-secondary-admin" onclick="closeOrderModal()">Close</button>
+      <button class="btn-primary-admin" id="orderSaveBtn" onclick="saveOrderStatus()">Update Status</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Message Modal ──────────────────────────────────────────────────────── -->
+<div class="admin-modal-overlay" id="msgModalOverlay">
+  <div class="admin-modal">
+    <div class="admin-modal__header">
+      <h3>Message Details</h3>
+      <button class="modal-close" onclick="closeMsgModal()">✕</button>
+    </div>
+    <div class="admin-modal__body" id="msgModalBody"></div>
+    <div class="admin-modal__footer">
+      <button class="btn-secondary-admin" onclick="closeMsgModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sidebar overlay for mobile -->
+<div id="sidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99"></div>
+
+<script src="/js/app.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

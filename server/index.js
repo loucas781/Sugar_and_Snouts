@@ -1,0 +1,174 @@
+'use strict'
+
+// ─── Load environment ─────────────────────────────────────────────────────────
+const fs   = require('fs')
+const path = require('path')
+
+const env     = process.env.NODE_ENV || 'development'
+const envFile = path.join(__dirname, '../', `.env.${env}`)
+if (fs.existsSync(envFile)) {
+  fs.readFileSync(envFile, 'utf8').split('\n').forEach(line => {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) return
+    const eqIdx = trimmed.indexOf('=')
+    if (eqIdx < 0) return
+    const k = trimmed.slice(0, eqIdx).trim()
+    const v = trimmed.slice(eqIdx + 1).trim()
+    if (k && !process.env[k]) process.env[k] = v
+  })
+}
+
+// ─── Version ──────────────────────────────────────────────────────────────────
+const versionFile = path.join(__dirname, '../.version')
+const rawVersion  = fs.existsSync(versionFile)
+  ? fs.readFileSync(versionFile, 'utf8').trim()
+  : require('../package.json').version
+
+const baseVersion = rawVersion.replace(/-dev\.\d+/, '').replace(/-rc.*/, '')
+const APP_ENV     = (process.env.APP_ENV || env).toLowerCase()
+let APP_VERSION
+if (APP_ENV === 'production') {
+  APP_VERSION = baseVersion
+} else if (APP_ENV === 'staging') {
+  APP_VERSION = rawVersion.includes('-rc') ? rawVersion : `${baseVersion}-rc`
+} else {
+  APP_VERSION = rawVersion.includes('-dev.') ? rawVersion : `${baseVersion}-dev.0`
+}
+
+// ─── Run migration on startup ─────────────────────────────────────────────────
+require('./db/migrate')
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+const express      = require('express')
+const cookieParser = require('cookie-parser')
+const rateLimit    = require('express-rate-limit')
+const { optionalAuth } = require('./middleware/auth')
+
+const app = express()
+
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: false, limit: '2mb' }))
+app.use(cookieParser())
+
+if (process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1)
+
+// ─── Security headers ─────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  res.set('X-Content-Type-Options', 'nosniff')
+  res.set('X-Frame-Options', 'DENY')
+  res.set('X-XSS-Protection', '1; mode=block')
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  if (APP_ENV === 'production') {
+    res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  }
+  next()
+})
+
+// ─── Rate limiters ────────────────────────────────────────────────────────────
+app.use('/api/auth', rateLimit({
+  windowMs: 15 * 60 * 1000, max: 20,
+  skip: () => APP_ENV === 'development',
+  message: { error: 'Too many login attempts — please wait 15 minutes.' },
+}))
+app.use('/api/orders', rateLimit({
+  windowMs: 60 * 60 * 1000, max: 30,
+  skip: () => APP_ENV === 'development',
+  message: { error: 'Too many order submissions — please try again later.' },
+}))
+app.use('/api/contact', rateLimit({
+  windowMs: 60 * 60 * 1000, max: 10,
+  skip: () => APP_ENV === 'development',
+  message: { error: 'Too many messages — please try again later.' },
+}))
+
+// ─── Static files ─────────────────────────────────────────────────────────────
+// New app pages from public/
+app.use(express.static(path.join(__dirname, '../public'), { index: false }))
+// Legacy static assets (img, css, js) from project root
+app.use('/img',        express.static(path.join(__dirname, '../img')))
+app.use('/css',        express.static(path.join(__dirname, '../css')))
+app.use('/js',         express.static(path.join(__dirname, '../js')))
+app.use('/style.css',  (req, res) => res.sendFile(path.join(__dirname, '../style.css')))
+app.use('/favicon.jpg',(req, res) => res.sendFile(path.join(__dirname, '../favicon.jpg')))
+// Product image uploads
+const uploadPath = process.env.UPLOAD_PATH
+  ? path.resolve(process.env.UPLOAD_PATH)
+  : path.join(__dirname, '../uploads')
+app.use('/uploads', express.static(uploadPath))
+
+// ─── Health check ─────────────────────────────────────────────────────────────
+app.get('/api/health', (req, res) => {
+  try {
+    require('./db/connection').prepare('SELECT 1').get()
+    res.json({ ok: true, version: APP_VERSION, uptime: Math.floor(process.uptime()) })
+  } catch {
+    res.status(503).json({ ok: false, error: 'Database unavailable' })
+  }
+})
+
+// ─── Config endpoint ──────────────────────────────────────────────────────────
+app.get('/api/config', optionalAuth, (req, res) => {
+  const db = require('./db/connection')
+  const unread = db.prepare("SELECT COUNT(*) as c FROM contact_messages WHERE is_read = 0").get()
+  const pendingOrders = db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'pending'").get()
+
+  res.set('Cache-Control', 'no-store')
+  res.json({
+    appName:       process.env.APP_NAME || 'Sugar & Snouts',
+    appEnv:        APP_ENV,
+    version:       APP_VERSION,
+    user:          req.user || null,
+    unreadMessages: unread.c,
+    pendingOrders: pendingOrders.c,
+  })
+})
+
+// ─── Stats (admin) ────────────────────────────────────────────────────────────
+app.get('/api/stats', require('./middleware/auth').requireAuth, (req, res) => {
+  const db = require('./db/connection')
+  const products    = db.prepare('SELECT COUNT(*) as c FROM products').get()
+  const available   = db.prepare('SELECT COUNT(*) as c FROM products WHERE is_available = 1').get()
+  const featured    = db.prepare('SELECT COUNT(*) as c FROM products WHERE is_featured = 1').get()
+  const orders      = db.prepare('SELECT COUNT(*) as c FROM orders').get()
+  const pending     = db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'pending'").get()
+  const messages    = db.prepare('SELECT COUNT(*) as c FROM contact_messages WHERE is_read = 0').get()
+  res.json({
+    totalProducts: products.c,
+    availableProducts: available.c,
+    featuredProducts: featured.c,
+    totalOrders: orders.c,
+    pendingOrders: pending.c,
+    unreadMessages: messages.c,
+  })
+})
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+app.use('/api/auth',     require('./routes/auth'))
+app.use('/api/products', require('./routes/products'))
+app.use('/api/orders',   require('./routes/orders'))
+app.use('/api/contact',  require('./routes/contact'))
+
+// ─── Page routes ──────────────────────────────────────────────────────────────
+const pub = (file) => path.join(__dirname, '../public', file)
+app.get('/',                 (req, res) => res.sendFile(pub('index.html')))
+app.get('/shop',             (req, res) => res.sendFile(pub('shop.html')))
+app.get('/shop.html',        (req, res) => res.sendFile(pub('shop.html')))
+app.get('/contact',          (req, res) => res.sendFile(pub('contact.html')))
+app.get('/contact.html',     (req, res) => res.sendFile(pub('contact.html')))
+app.get('/admin',            (req, res) => res.redirect('/admin/'))
+app.get('/admin/',           (req, res) => res.sendFile(pub('admin/login.html')))
+app.get('/admin/dashboard',  (req, res) => res.sendFile(pub('admin/dashboard.html')))
+
+// ─── 404 ──────────────────────────────────────────────────────────────────────
+app.use((req, res) => {
+  if (req.originalUrl.startsWith('/api/')) return res.status(404).json({ error: 'Not found' })
+  res.status(404).sendFile(pub('index.html'))
+})
+
+// ─── Start ────────────────────────────────────────────────────────────────────
+const PORT = parseInt(process.env.PORT || 3000)
+app.listen(PORT, () => {
+  console.log(`\n  🍰  Sugar & Snouts  ·  ${APP_ENV}  ·  v${APP_VERSION}`)
+  console.log(`  🌐  http://localhost:${PORT}\n`)
+})
