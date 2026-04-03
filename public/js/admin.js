@@ -3,9 +3,12 @@
 
 let _editingProductId = null
 let _editingOrderId   = null
+let _editingUserId    = null
+let _openMsgId        = null
 let _newImageFile     = null
 let _productFilter    = ''
 let _allProducts      = []
+let _categories       = []
 let _currentUser      = null
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
@@ -43,9 +46,15 @@ async function initAdmin() {
       if (b) { b.textContent = cfg.pendingOrders; b.style.display = '' }
     }
 
+    // Show Users nav for admins only
+    if (cfg.user.role === 'admin') {
+      const navUsers = document.getElementById('navUsers')
+      if (navUsers) navUsers.style.display = ''
+    }
+
     loadStats()
     setupTabs()
-    setupProductFilters()
+    loadCategories().then(setupProductFilters)
     setupSidebar()
   } catch { window.location.href = '/admin/' }
 }
@@ -58,14 +67,15 @@ function switchTab(name) {
   const btn  = document.querySelector(`[data-tab="${name}"]`)
   if (pane) pane.classList.add('active')
   if (btn)  btn.classList.add('active')
-  const titles = { overview: 'Overview', products: 'Products', orders: 'Orders', messages: 'Messages', settings: 'Settings' }
+  const titles = { overview: 'Overview', products: 'Products', orders: 'Orders', messages: 'Messages', users: 'Users', settings: 'Settings' }
   const titleEl = document.getElementById('topbarTitle')
   if (titleEl) titleEl.textContent = titles[name] || name
 
   if (name === 'products') loadProducts()
   if (name === 'orders')   loadOrders()
   if (name === 'messages') loadMessages()
-  if (name === 'settings') loadBuildInfo()
+  if (name === 'users')    loadUsers()
+  if (name === 'settings') { loadBuildInfo(); loadCategories() }
   closeSidebar()
 }
 
@@ -131,6 +141,81 @@ async function loadBuildInfo() {
   } catch { el.textContent = 'Could not load info' }
 }
 
+// ── Categories ────────────────────────────────────────────────────────────────
+async function loadCategories() {
+  try {
+    _categories = await fetch('/api/products/categories').then(r => r.json())
+    renderCategoriesList()
+    populateCategorySelect()
+  } catch { /* no-op */ }
+}
+
+function renderCategoriesList() {
+  const el = document.getElementById('categoriesList')
+  if (!el) return
+  if (!_categories.length) {
+    el.innerHTML = '<p style="color:#9ca3af;font-size:.85rem">No categories yet.</p>'
+    return
+  }
+  el.innerHTML = _categories.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;background:#f9fafb;border-radius:8px;margin-bottom:.4rem">
+      <span style="font-size:.9rem">${c.name}</span>
+      <button class="btn-admin-sm btn-delete" onclick="deleteCategory('${c.id}','${c.name.replace(/'/g,"&#39;")}')" style="padding:.2rem .5rem;font-size:.75rem">🗑️</button>
+    </div>`).join('')
+}
+
+function populateCategorySelect() {
+  const sel = document.getElementById('pCategoryId')
+  if (!sel) return
+  const current = sel.value
+  sel.innerHTML = _categories.map(c =>
+    `<option value="${c.id}">${c.name}</option>`
+  ).join('') || '<option value="">No categories</option>'
+  if (current && _categories.find(c => c.id === current)) sel.value = current
+}
+
+async function addCategory() {
+  const input = document.getElementById('newCategoryName')
+  const alert = document.getElementById('catAlert')
+  const name  = input?.value.trim()
+  if (!name) return
+
+  try {
+    const res  = await fetch('/api/products/admin/categories', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ name })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Failed to add category')
+    input.value = ''
+    alert.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.6rem 1rem;font-size:.85rem'
+    alert.textContent   = `✓ Category "${name}" added`
+    await loadCategories()
+    setupProductFilters()
+  } catch (err) {
+    alert.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.6rem 1rem;font-size:.85rem'
+    alert.textContent   = '✗ ' + err.message
+  }
+}
+
+async function deleteCategory(id, name) {
+  if (!confirm(`Delete category "${name}"? Products in this category will become uncategorised.`)) return
+  const alert = document.getElementById('catAlert')
+  try {
+    const res  = await fetch(`/api/products/admin/categories/${id}`, { method: 'DELETE' })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Delete failed')
+    alert.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.6rem 1rem;font-size:.85rem'
+    alert.textContent   = `✓ Category deleted`
+    await loadCategories()
+    setupProductFilters()
+  } catch (err) {
+    alert.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.6rem 1rem;font-size:.85rem'
+    alert.textContent   = '✗ ' + err.message
+  }
+}
+
 // ── Products ──────────────────────────────────────────────────────────────────
 async function loadProducts() {
   const spinner = document.getElementById('productsSpinner')
@@ -177,9 +262,17 @@ function renderProductGrid() {
 }
 
 function setupProductFilters() {
-  document.querySelectorAll('#productTabFilter .admin-tab').forEach(tab => {
+  const bar = document.getElementById('productTabFilter')
+  if (!bar) return
+
+  bar.innerHTML = `<button class="admin-tab active" data-pcat="">All</button>` +
+    _categories.map(c =>
+      `<button class="admin-tab" data-pcat="${c.id}">${c.name}</button>`
+    ).join('')
+
+  bar.querySelectorAll('.admin-tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      document.querySelectorAll('#productTabFilter .admin-tab').forEach(t => t.classList.remove('active'))
+      bar.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'))
       tab.classList.add('active')
       _productFilter = tab.dataset.pcat || ''
       renderProductGrid()
@@ -188,16 +281,18 @@ function setupProductFilters() {
 }
 
 function productCardHTML(p) {
-  const priceText = p.offerPrice ? `<span style="color:var(--pink-dark)">£${p.offerPrice.toFixed(2)}</span> <span style="text-decoration:line-through;color:#9ca3af;font-size:.85rem">£${p.price.toFixed(2)}</span>` : `£${p.price.toFixed(2)}`
+  const priceText = p.offerPrice
+    ? `<span style="color:var(--pink-dark)">£${p.offerPrice.toFixed(2)}</span> <span style="text-decoration:line-through;color:#9ca3af;font-size:.85rem">£${p.price.toFixed(2)}</span>`
+    : `£${p.price.toFixed(2)}`
   const tags = [
     p.isFeatured    ? `<span class="tag tag-featured">Fav</span>` : '',
     p.isNew         ? `<span class="tag tag-new">New</span>` : '',
     p.isRecommended ? `<span class="tag tag-recommended">Rec</span>` : '',
   ].filter(Boolean).join('')
-  const catEmoji = { cookies: '🍪', cupcakes: '🧁', woof_treats: '🐾', pur_treats: '🐱' }
+  const catLabel = p.categoryName || (p.category || '').replace(/_/g, ' ')
   const img = p.imagePath
     ? `<img src="${p.imagePath}" class="admin-product-card__img" alt="${p.name}">`
-    : `<div class="admin-product-card__img-placeholder">${catEmoji[p.category] || '🍰'}</div>`
+    : `<div class="admin-product-card__img-placeholder">🍰</div>`
 
   return `
     <div class="admin-product-card">
@@ -205,7 +300,7 @@ function productCardHTML(p) {
       ${img}
       <div class="admin-product-card__body">
         <div class="admin-product-card__name" title="${p.name}">${p.name}</div>
-        <div class="admin-product-card__cat">${p.category.replace('_', ' ')}</div>
+        <div class="admin-product-card__cat">${catLabel}</div>
         <div class="admin-product-card__price">${priceText}</div>
         ${p.quantityLimit ? `<div style="font-size:.75rem;color:#9ca3af;margin-bottom:.4rem">Limit: ${p.quantityLimit}/order</div>` : ''}
         ${tags ? `<div class="admin-product-card__tags">${tags}</div>` : ''}
@@ -223,6 +318,7 @@ function openAddProduct() {
   document.getElementById('productModalTitle').textContent = 'Add Product'
   document.getElementById('productForm').reset()
   document.getElementById('pAvailable').checked = true
+  populateCategorySelect()
   clearImage()
   openProductModal()
 }
@@ -233,19 +329,22 @@ function openEditProduct(id) {
   _editingProductId = id
   _newImageFile     = null
   document.getElementById('productModalTitle').textContent = 'Edit Product'
-  document.getElementById('productId').value     = id
-  document.getElementById('pName').value         = p.name
-  document.getElementById('pDesc').value         = p.description || ''
-  document.getElementById('pCategory').value     = p.category
-  document.getElementById('pPrice').value        = p.price
-  document.getElementById('pOfferPrice').value   = p.offerPrice || ''
-  document.getElementById('pOfferExpires').value = p.offerExpiresAt ? p.offerExpiresAt.replace('Z','').slice(0,16) : ''
-  document.getElementById('pQtyLimit').value     = p.quantityLimit || ''
-  document.getElementById('pSortOrder').value    = p.sortOrder ?? 0
-  document.getElementById('pAvailable').checked  = p.isAvailable
-  document.getElementById('pFeatured').checked   = p.isFeatured
-  document.getElementById('pNew').checked        = p.isNew
+  document.getElementById('productId').value      = id
+  document.getElementById('pName').value          = p.name
+  document.getElementById('pDesc').value          = p.description || ''
+  document.getElementById('pPrice').value         = p.price
+  document.getElementById('pOfferPrice').value    = p.offerPrice || ''
+  document.getElementById('pOfferExpires').value  = p.offerExpiresAt ? p.offerExpiresAt.replace('Z','').slice(0,16) : ''
+  document.getElementById('pQtyLimit').value      = p.quantityLimit || ''
+  document.getElementById('pSortOrder').value     = p.sortOrder ?? 0
+  document.getElementById('pAvailable').checked   = p.isAvailable
+  document.getElementById('pFeatured').checked    = p.isFeatured
+  document.getElementById('pNew').checked         = p.isNew
   document.getElementById('pRecommended').checked = p.isRecommended
+
+  populateCategorySelect()
+  const catSel = document.getElementById('pCategoryId')
+  if (catSel) catSel.value = p.category || ''
 
   if (p.imagePath) {
     document.getElementById('imgPlaceholder').style.display   = 'none'
@@ -304,13 +403,12 @@ async function saveProduct() {
   btn.textContent = 'Saving…'
 
   try {
-    const form = document.getElementById('productForm')
+    const categoryId = document.getElementById('pCategoryId').value
 
-    // Build FormData for file upload
     const fd = new FormData()
     fd.append('name',          document.getElementById('pName').value)
     fd.append('description',   document.getElementById('pDesc').value)
-    fd.append('category',      document.getElementById('pCategory').value)
+    fd.append('categoryId',    categoryId)
     fd.append('price',         document.getElementById('pPrice').value)
     fd.append('offerPrice',    document.getElementById('pOfferPrice').value)
     fd.append('offerExpiresAt', document.getElementById('pOfferExpires').value)
@@ -324,20 +422,18 @@ async function saveProduct() {
 
     let res
     if (_editingProductId) {
-      // If we have a new image, use the image upload endpoint first
       if (_newImageFile) {
         const imgFd = new FormData()
         imgFd.append('image', _newImageFile)
         await fetch(`/api/products/admin/${_editingProductId}/image`, { method: 'POST', body: imgFd })
       }
-      // Update product data via JSON (no file)
       res = await fetch(`/api/products/admin/${_editingProductId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name:          document.getElementById('pName').value,
           description:   document.getElementById('pDesc').value,
-          category:      document.getElementById('pCategory').value,
+          categoryId,
           price:         parseFloat(document.getElementById('pPrice').value),
           offerPrice:    document.getElementById('pOfferPrice').value ? parseFloat(document.getElementById('pOfferPrice').value) : null,
           offerExpiresAt: document.getElementById('pOfferExpires').value || null,
@@ -494,6 +590,13 @@ async function loadMessages() {
   try {
     const msgs = await fetch('/api/contact/admin').then(r => r.json())
     spinner.style.display = 'none'
+
+    const unreadEl = document.getElementById('unreadCount')
+    if (unreadEl) {
+      const unread = msgs.filter(m => !m.is_read).length
+      unreadEl.textContent = unread > 0 ? `${unread} unread` : ''
+    }
+
     if (!msgs.length) { empty.style.display = ''; return }
 
     list.style.display = ''
@@ -518,7 +621,7 @@ async function loadMessages() {
 }
 
 async function openMsg(id, name, email, message) {
-  // Mark as read
+  _openMsgId = id
   await fetch(`/api/contact/admin/${id}/read`, { method: 'PATCH' }).catch(() => {})
 
   document.getElementById('msgModalBody').innerHTML = `
@@ -529,7 +632,6 @@ async function openMsg(id, name, email, message) {
     <div style="background:#f9fafb;border-radius:8px;padding:1rem;font-size:.9rem;line-height:1.7;white-space:pre-wrap">${message}</div>`
   document.getElementById('msgModalOverlay').classList.add('open')
 
-  // Refresh list and unread badge
   loadMessages()
   const badge = document.getElementById('unreadBadge')
   if (badge) {
@@ -538,7 +640,194 @@ async function openMsg(id, name, email, message) {
     badge.style.display = n > 0 ? '' : 'none'
   }
 }
-function closeMsgModal() { document.getElementById('msgModalOverlay').classList.remove('open') }
+
+function closeMsgModal() {
+  document.getElementById('msgModalOverlay').classList.remove('open')
+  _openMsgId = null
+}
+
+async function deleteCurrentMessage() {
+  if (!_openMsgId) return
+  if (!confirm('Delete this message? This cannot be undone.')) return
+  try {
+    const res = await fetch(`/api/contact/admin/${_openMsgId}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error('Delete failed')
+    closeMsgModal()
+    loadMessages()
+    loadStats()
+    showToast('Message deleted', 'success')
+  } catch (err) {
+    showToast(err.message, 'error')
+  }
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const spinner  = document.getElementById('usersSpinner')
+  const tableWrap = document.getElementById('usersTableWrap')
+  const empty    = document.getElementById('usersEmpty')
+
+  spinner.style.display   = ''
+  tableWrap.style.display = 'none'
+  empty.style.display     = 'none'
+
+  try {
+    const users = await fetch('/api/admin/users').then(r => r.json())
+    spinner.style.display = 'none'
+
+    if (!users.length) { empty.style.display = ''; return }
+
+    tableWrap.style.display = ''
+    document.getElementById('usersBody').innerHTML = users.map(u => `
+      <tr>
+        <td style="font-weight:500">${u.name}</td>
+        <td style="font-size:.85rem;color:#4b5563">${u.email}</td>
+        <td><span class="status-badge status-${u.role === 'admin' ? 'confirmed' : 'pending'}">${u.role}</span></td>
+        <td><span class="status-badge status-${u.is_active ? 'confirmed' : 'cancelled'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+        <td style="font-size:.8rem;color:#9ca3af;white-space:nowrap">${new Date(u.created_at).toLocaleDateString('en-GB')}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-admin-sm btn-edit" onclick="openEditUser('${u.id}')">✏️ Edit</button>
+          <button class="btn-admin-sm btn-edit" onclick="openResetPwModal('${u.id}','${u.name.replace(/'/g,"&#39;")}')" style="margin-left:.25rem">🔑</button>
+          ${u.id !== _currentUser?.id ? `<button class="btn-admin-sm btn-delete" onclick="deleteUser('${u.id}','${u.name.replace(/'/g,"&#39;")}')">🗑️</button>` : ''}
+        </td>
+      </tr>`).join('')
+  } catch {
+    spinner.style.display = 'none'
+    empty.style.display   = ''
+    document.querySelector('#usersEmpty p').textContent = 'Failed to load users.'
+  }
+}
+
+function openAddUser() {
+  _editingUserId = null
+  document.getElementById('userModalTitle').textContent = 'Add User'
+  document.getElementById('userForm').reset()
+  document.getElementById('userId').value = ''
+  document.getElementById('uPasswordGroup').style.display = ''
+  document.getElementById('uActiveGroup').style.display   = 'none'
+  document.getElementById('userAlert').style.display      = 'none'
+  document.getElementById('userModalOverlay').classList.add('open')
+}
+
+function openEditUser(id) {
+  const row = document.querySelector(`#usersBody tr [onclick="openEditUser('${id}')"]`)
+  // Re-fetch user data from the table row
+  fetch('/api/admin/users').then(r => r.json()).then(users => {
+    const u = users.find(x => x.id === id)
+    if (!u) return
+    _editingUserId = id
+    document.getElementById('userModalTitle').textContent = 'Edit User'
+    document.getElementById('userId').value    = id
+    document.getElementById('uName').value     = u.name
+    document.getElementById('uEmail').value    = u.email
+    document.getElementById('uRole').value     = u.role
+    document.getElementById('uActive').checked = !!u.is_active
+    document.getElementById('uPassword').value = ''
+    document.getElementById('uPasswordGroup').style.display = 'none'
+    document.getElementById('uActiveGroup').style.display   = ''
+    document.getElementById('userAlert').style.display      = 'none'
+    document.getElementById('userModalOverlay').classList.add('open')
+  })
+}
+
+function closeUserModal() {
+  document.getElementById('userModalOverlay').classList.remove('open')
+  _editingUserId = null
+}
+
+async function saveUser() {
+  const btn   = document.getElementById('userSaveBtn')
+  const alert = document.getElementById('userAlert')
+  btn.disabled    = true
+  btn.textContent = 'Saving…'
+  alert.style.display = 'none'
+
+  const name     = document.getElementById('uName').value.trim()
+  const email    = document.getElementById('uEmail').value.trim()
+  const password = document.getElementById('uPassword').value
+  const role     = document.getElementById('uRole').value
+  const isActive = document.getElementById('uActive').checked
+
+  try {
+    let res
+    if (_editingUserId) {
+      const body = { name, email, role, isActive }
+      res = await fetch(`/api/admin/users/${_editingUserId}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body)
+      })
+    } else {
+      if (!password) throw new Error('Password is required for new users')
+      res = await fetch('/api/admin/users', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name, email, password, role })
+      })
+    }
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    closeUserModal()
+    loadUsers()
+    showToast(_editingUserId ? 'User updated!' : 'User created!', 'success')
+  } catch (err) {
+    alert.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    alert.textContent   = '✗ ' + err.message
+  } finally {
+    btn.disabled    = false
+    btn.textContent = 'Save'
+  }
+}
+
+async function deleteUser(id, name) {
+  if (!confirm(`Delete user "${name}"? This cannot be undone.`)) return
+  try {
+    const res  = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Delete failed')
+    loadUsers()
+    showToast('User deleted', 'success')
+  } catch (err) {
+    showToast(err.message, 'error')
+  }
+}
+
+let _resetPwUserId = null
+
+function openResetPwModal(userId, userName) {
+  _resetPwUserId = userId
+  document.getElementById('resetPwInfo').textContent = `Set a new password for ${userName}.`
+  document.getElementById('resetPwValue').value = ''
+  document.getElementById('resetPwAlert').style.display = 'none'
+  document.getElementById('resetPwModalOverlay').classList.add('open')
+}
+
+function closeResetPwModal() {
+  document.getElementById('resetPwModalOverlay').classList.remove('open')
+  _resetPwUserId = null
+}
+
+async function saveResetPw() {
+  if (!_resetPwUserId) return
+  const password = document.getElementById('resetPwValue').value
+  const alert    = document.getElementById('resetPwAlert')
+  alert.style.display = 'none'
+
+  try {
+    const res  = await fetch(`/api/admin/users/${_resetPwUserId}/password`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ password })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Reset failed')
+    closeResetPwModal()
+    showToast('Password reset successfully', 'success')
+  } catch (err) {
+    alert.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    alert.textContent   = '✗ ' + err.message
+  }
+}
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -578,6 +867,8 @@ document.addEventListener('click', (e) => {
   if (e.target.id === 'productModalOverlay') closeProductModal()
   if (e.target.id === 'orderModalOverlay')   closeOrderModal()
   if (e.target.id === 'msgModalOverlay')     closeMsgModal()
+  if (e.target.id === 'userModalOverlay')    closeUserModal()
+  if (e.target.id === 'resetPwModalOverlay') closeResetPwModal()
 })
 
 // ── Init ──────────────────────────────────────────────────────────────────────

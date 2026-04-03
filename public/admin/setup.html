@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" type="image/jpg" href="/favicon.jpg">
+  <link rel="stylesheet" href="/css/app.css">
+  <link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT&family=Pacifico&display=swap" rel="stylesheet">
+  <title>First-time Setup — Sugar & Snouts</title>
+</head>
+<body class="admin-body">
+
+<div class="admin-login-page">
+  <div class="admin-login-card">
+    <img src="/favicon.jpg" alt="Sugar & Snouts" class="admin-login-logo">
+    <h1>Sugar & Snouts</h1>
+    <p class="subtitle">Create your admin account to get started</p>
+
+    <div class="admin-error" id="setupError"></div>
+
+    <form id="setupForm">
+      <input type="text"     name="name"     class="admin-input" placeholder="Your name"       required autocomplete="name">
+      <input type="email"    name="email"    class="admin-input" placeholder="Email address"   required autocomplete="username">
+      <input type="password" name="password" class="admin-input" placeholder="Password (min 12 chars, upper, lower, number)" required autocomplete="new-password">
+      <button type="submit" class="admin-login-btn" id="setupBtn">Create Account</button>
+    </form>
+
+    <p style="margin-top:1rem;font-size:.8rem;color:var(--text-muted);text-align:center">
+      This page is only available before the first account is created.
+    </p>
+
+    <p id="versionTag" style="font-size:.72rem;opacity:.45;margin-top:1rem"></p>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+;(async () => {
+  // Redirect to login if setup is already done
+  try {
+    const res  = await fetch('/api/auth/setup-status')
+    const data = await res.json()
+    if (!data.setupRequired) { window.location.href = '/admin/'; return }
+  } catch { window.location.href = '/admin/'; return }
+
+  document.getElementById('setupForm').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const btn   = document.getElementById('setupBtn')
+    const error = document.getElementById('setupError')
+    btn.disabled    = true
+    btn.textContent = 'Creating…'
+    error.classList.remove('show')
+
+    const data = new FormData(e.target)
+    try {
+      const res  = await fetch('/api/auth/setup', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          name:     data.get('name'),
+          email:    data.get('email'),
+          password: data.get('password'),
+        })
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Setup failed')
+      window.location.href = '/admin/'
+    } catch (err) {
+      error.textContent = err.message
+      error.classList.add('show')
+      btn.disabled    = false
+      btn.textContent = 'Create Account'
+    }
+  })
+})()
+</script>
+</body>
+</html>

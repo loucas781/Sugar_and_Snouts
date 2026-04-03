@@ -61,4 +61,12 @@ router.patch('/admin/:id/read', requireAuth, (req, res) => {
   res.json({ ok: true })
 })
 
+// DELETE /api/admin/messages/:id
+router.delete('/admin/:id', requireAuth, (req, res) => {
+  const msg = db.prepare('SELECT id FROM contact_messages WHERE id = ?').get(req.params.id)
+  if (!msg) return res.status(404).json({ error: 'Message not found' })
+  db.prepare('DELETE FROM contact_messages WHERE id = ?').run(req.params.id)
+  res.json({ ok: true })
+})
+
 module.exports = router

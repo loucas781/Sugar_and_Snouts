@@ -697,6 +697,8 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
 .btn-primary-admin { background: var(--dark); color: white; padding: .55rem 1.2rem; border-radius: 10px; border: none; cursor: pointer; font-size: .9rem; transition: background .2s; }
 .btn-primary-admin:hover { background: var(--dark-mid); }
 .btn-secondary-admin { background: #f3f4f6; color: var(--dark); padding: .55rem 1.2rem; border-radius: 10px; border: none; cursor: pointer; font-size: .9rem; }
+.btn-delete-admin { background: #fee2e2; color: #991b1b; padding: .55rem 1.2rem; border-radius: 10px; border: none; cursor: pointer; font-size: .9rem; transition: background .2s; margin-right: auto; }
+.btn-delete-admin:hover { background: #fecaca; }
 
 /* Admin modal */
 .admin-modal-overlay {

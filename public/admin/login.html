@@ -34,6 +34,11 @@
 
 <script src="/js/app.js"></script>
 <script>
+// Redirect to setup if no admin account exists yet
+fetch('/api/auth/setup-status').then(r => r.json()).then(d => {
+  if (d.setupRequired) window.location.href = '/admin/setup'
+}).catch(() => {})
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault()
   const btn   = document.getElementById('loginBtn')

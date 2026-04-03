@@ -34,6 +34,13 @@ const upload = multer({
   }
 })
 
+// ── Category helpers ──────────────────────────────────────────────────────────
+function getCategoryName(categoryId) {
+  if (!categoryId) return null
+  const cat = db.prepare('SELECT name FROM product_categories WHERE id = ?').get(categoryId)
+  return cat ? cat.name : categoryId
+}
+
 // ── Helper: serialize product for API response ────────────────────────────────
 function serializeProduct(p) {
   const offerActive = p.offer_price && p.offer_expires_at
@@ -44,7 +51,8 @@ function serializeProduct(p) {
     id:            p.id,
     name:          p.name,
     description:   p.description,
-    category:      p.category,
+    category:      p.category_id || p.category,
+    categoryName:  getCategoryName(p.category_id) || p.category,
     price:         p.price,
     offerPrice:    offerActive ? p.offer_price : null,
     offerExpiresAt: p.offer_expires_at,
@@ -68,7 +76,7 @@ router.get('/', (req, res) => {
   let sql = 'SELECT * FROM products WHERE is_available = 1'
   const params = []
 
-  if (category) { sql += ' AND category = ?'; params.push(category) }
+  if (category) { sql += ' AND (category_id = ? OR (category_id IS NULL AND category = ?))'; params.push(category, category) }
   if (featured  === '1') { sql += ' AND is_featured = 1' }
   if (recommended === '1') { sql += ' AND is_recommended = 1' }
   if (isNew === '1') { sql += ' AND is_new = 1' }
@@ -99,22 +107,24 @@ router.get('/admin/all', requireAuth, (req, res) => {
 // POST /api/admin/products — create product
 router.post('/admin', requireAuth, upload.single('image'), (req, res) => {
   const {
-    name, description, category, price, offerPrice, offerExpiresAt,
+    name, description, categoryId, price, offerPrice, offerExpiresAt,
     isAvailable, isFeatured, isRecommended, isNew, quantityLimit, sortOrder
   } = req.body
 
   if (!name || !price) return res.status(400).json({ error: 'Name and price are required' })
+  if (!categoryId) return res.status(400).json({ error: 'Category is required' })
 
   const id = uuidv4()
   const imagePath = req.file ? req.file.filename : null
 
   db.prepare(`
-    INSERT INTO products (id, name, description, category, price, offer_price, offer_expires_at,
+    INSERT INTO products (id, name, description, category, category_id, price, offer_price, offer_expires_at,
       image_path, is_available, is_featured, is_recommended, is_new, quantity_limit, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, name.trim(), description?.trim() || null,
-    category || 'cookies', parseFloat(price),
+    'other', categoryId,
+    parseFloat(price),
     offerPrice ? parseFloat(offerPrice) : null,
     offerExpiresAt || null,
     imagePath,
@@ -136,13 +146,13 @@ router.put('/admin/:id', requireAuth, (req, res) => {
   if (!product) return res.status(404).json({ error: 'Product not found' })
 
   const {
-    name, description, category, price, offerPrice, offerExpiresAt,
+    name, description, categoryId, price, offerPrice, offerExpiresAt,
     isAvailable, isFeatured, isRecommended, isNew, quantityLimit, sortOrder
   } = req.body
 
   db.prepare(`
     UPDATE products SET
-      name = ?, description = ?, category = ?, price = ?,
+      name = ?, description = ?, category_id = ?, price = ?,
       offer_price = ?, offer_expires_at = ?,
       is_available = ?, is_featured = ?, is_recommended = ?, is_new = ?,
       quantity_limit = ?, sort_order = ?,
@@ -151,7 +161,7 @@ router.put('/admin/:id', requireAuth, (req, res) => {
   `).run(
     name?.trim() || product.name,
     description?.trim() ?? product.description,
-    category || product.category,
+    categoryId || product.category_id || product.category,
     price !== undefined ? parseFloat(price) : product.price,
     offerPrice !== undefined ? (offerPrice ? parseFloat(offerPrice) : null) : product.offer_price,
     offerExpiresAt !== undefined ? (offerExpiresAt || null) : product.offer_expires_at,
@@ -199,6 +209,38 @@ router.delete('/admin/:id', requireAuth, (req, res) => {
   }
 
   db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id)
+  res.json({ ok: true })
+})
+
+// ── Product Categories ────────────────────────────────────────────────────────
+
+// GET /api/products/categories — public list of categories
+router.get('/categories', (req, res) => {
+  const cats = db.prepare('SELECT * FROM product_categories ORDER BY sort_order ASC, name ASC').all()
+  res.json(cats)
+})
+
+// POST /api/admin/categories — create category (admin)
+router.post('/admin/categories', requireAuth, (req, res) => {
+  const { name } = req.body
+  if (!name?.trim()) return res.status(400).json({ error: 'Category name is required' })
+
+  const { v4: uuidv4 } = require('uuid')
+  const id = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+  const existing = db.prepare('SELECT id FROM product_categories WHERE id = ? OR name = ?').get(id, name.trim())
+  if (existing) return res.status(409).json({ error: 'A category with this name already exists' })
+
+  const maxOrder = db.prepare('SELECT MAX(sort_order) as m FROM product_categories').get()
+  db.prepare('INSERT INTO product_categories (id, name, sort_order) VALUES (?, ?, ?)').run(id, name.trim(), (maxOrder.m || 0) + 1)
+  res.status(201).json({ ok: true, id, name: name.trim() })
+})
+
+// DELETE /api/admin/categories/:id — delete category (admin)
+router.delete('/admin/categories/:id', requireAuth, (req, res) => {
+  const { id } = req.params
+  const inUse = db.prepare('SELECT COUNT(*) as c FROM products WHERE category_id = ?').get(id)
+  if (inUse.c > 0) return res.status(409).json({ error: `Cannot delete — ${inUse.c} product(s) use this category` })
+  db.prepare('DELETE FROM product_categories WHERE id = ?').run(id)
   res.json({ ok: true })
 })
 

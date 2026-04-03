@@ -112,6 +112,14 @@ function migrate() {
       created_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- ── Product Categories ────────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS product_categories (
+      id         TEXT PRIMARY KEY,
+      name       TEXT NOT NULL UNIQUE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     -- ── App Preferences ───────────────────────────────────────────────
     CREATE TABLE IF NOT EXISTS app_preferences (
       key        TEXT PRIMARY KEY,
@@ -132,6 +140,30 @@ function migrate() {
   addIfMissing('token_version',   'INTEGER NOT NULL DEFAULT 0')
   addIfMissing('failed_attempts', 'INTEGER NOT NULL DEFAULT 0')
   addIfMissing('locked_until',    'TEXT')
+
+  // ── Safe column addition: products.category_id ───────────────────────────
+  const productCols = db.prepare("PRAGMA table_info(products)").all().map(c => c.name)
+  if (!productCols.includes('category_id')) {
+    db.exec('ALTER TABLE products ADD COLUMN category_id TEXT')
+    // Backfill: map old category value into category_id
+    db.exec("UPDATE products SET category_id = category WHERE category_id IS NULL")
+    console.log('  ✓  Added column products.category_id (backfilled from category)')
+  }
+
+  // ── Seed default product categories if none exist ────────────────────────
+  const catCount = db.prepare('SELECT COUNT(*) as c FROM product_categories').get()
+  if (catCount.c === 0) {
+    const defaultCategories = [
+      { id: 'cookies',     name: 'Cookies',     sort_order: 1 },
+      { id: 'cupcakes',    name: 'Cupcakes',    sort_order: 2 },
+      { id: 'woof_treats', name: 'Woof Treats', sort_order: 3 },
+      { id: 'pur_treats',  name: 'Pur Treats',  sort_order: 4 },
+      { id: 'other',       name: 'Other',       sort_order: 5 },
+    ]
+    const insertCat = db.prepare('INSERT OR IGNORE INTO product_categories (id, name, sort_order) VALUES (?, ?, ?)')
+    defaultCategories.forEach(c => insertCat.run(c.id, c.name, c.sort_order))
+    console.log('  ✓  Default product categories seeded')
+  }
 
   // ── Seed default admin if none exists ────────────────────────────────────
   const count = db.prepare('SELECT COUNT(*) as c FROM admin_users').get()

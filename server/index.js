@@ -144,10 +144,11 @@ app.get('/api/stats', require('./middleware/auth').requireAuth, (req, res) => {
 })
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/auth',     require('./routes/auth'))
-app.use('/api/products', require('./routes/products'))
-app.use('/api/orders',   require('./routes/orders'))
-app.use('/api/contact',  require('./routes/contact'))
+app.use('/api/auth',         require('./routes/auth'))
+app.use('/api/products',     require('./routes/products'))
+app.use('/api/orders',       require('./routes/orders'))
+app.use('/api/contact',      require('./routes/contact'))
+app.use('/api/admin/users',  require('./routes/users'))
 
 // ─── Page routes ──────────────────────────────────────────────────────────────
 const pub = (file) => path.join(__dirname, '../public', file)
@@ -156,6 +157,7 @@ app.get('/shop',             (req, res) => res.sendFile(pub('shop.html')))
 app.get('/shop.html',        (req, res) => res.sendFile(pub('shop.html')))
 app.get('/contact',          (req, res) => res.sendFile(pub('contact.html')))
 app.get('/contact.html',     (req, res) => res.sendFile(pub('contact.html')))
+app.get('/admin/setup', (req, res) => { res.set('X-Robots-Tag', 'noindex, nofollow'); res.sendFile(pub('admin/setup.html')) })
 app.get('/admin', (req, res) => {
   if (!req.originalUrl.startsWith('/admin/')) return res.redirect('/admin/')
   res.set('X-Robots-Tag', 'noindex, nofollow')

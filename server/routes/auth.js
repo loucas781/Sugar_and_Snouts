@@ -15,6 +15,35 @@ function getIp(req) {
   return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || null
 }
 
+// GET /api/auth/setup-status  — public, tells the UI whether first-run setup is needed
+router.get('/setup-status', (req, res) => {
+  const count = db.prepare('SELECT COUNT(*) as c FROM admin_users').get()
+  res.json({ setupRequired: count.c === 0 })
+})
+
+// POST /api/auth/setup  — create the first admin; fails if any user already exists
+router.post('/setup', async (req, res) => {
+  const count = db.prepare('SELECT COUNT(*) as c FROM admin_users').get()
+  if (count.c > 0) return res.status(403).json({ error: 'Setup already complete' })
+
+  const { name, email, password } = req.body
+  if (!name || !email || !password) return res.status(400).json({ error: 'Name, email and password are required' })
+
+  const policy = getPasswordPolicy()
+  const validation = validatePassword(password, policy)
+  if (!validation.ok) return res.status(400).json({ error: validation.errors[0], errors: validation.errors })
+
+  const { v4: uuidv4 } = require('uuid')
+  const hash = await hashPassword(password)
+  db.prepare(`
+    INSERT INTO admin_users (id, name, email, password, role, is_active, token_version)
+    VALUES (?, ?, ?, ?, 'admin', 1, 0)
+  `).run(uuidv4(), name.trim(), email.toLowerCase().trim(), hash)
+
+  audit(null, 'admin.setup', null, null, email.toLowerCase().trim(), { ip: getIp(req) })
+  res.json({ ok: true })
+})
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body

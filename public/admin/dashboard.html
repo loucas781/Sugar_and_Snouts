@@ -34,6 +34,9 @@
         <span class="nav-icon">💌</span> Messages
         <span class="admin-nav-badge" id="unreadBadge" style="display:none">0</span>
       </button>
+      <button class="admin-nav-item" data-tab="users" id="navUsers" style="display:none">
+        <span class="nav-icon">👥</span> Users
+      </button>
       <button class="admin-nav-item" data-tab="settings">
         <span class="nav-icon">⚙️</span> Settings
       </button>
@@ -92,14 +95,9 @@
             <button class="btn-primary-admin" onclick="openAddProduct()">+ Add Product</button>
           </div>
           <div class="admin-panel__body">
-            <!-- Category quick-filter -->
+            <!-- Category quick-filter (populated dynamically) -->
             <div class="admin-tabs" id="productTabFilter">
               <button class="admin-tab active" data-pcat="">All</button>
-              <button class="admin-tab" data-pcat="cookies">Cookies</button>
-              <button class="admin-tab" data-pcat="cupcakes">Cupcakes</button>
-              <button class="admin-tab" data-pcat="woof_treats">Woof Treats</button>
-              <button class="admin-tab" data-pcat="pur_treats">Pur Treats</button>
-              <button class="admin-tab" data-pcat="other">Other</button>
             </div>
             <div class="sns-spinner" id="productsSpinner"></div>
             <div class="admin-product-grid" id="productGrid" style="display:none"></div>
@@ -153,13 +151,39 @@
       <!-- ── Messages Tab ─────────────────────────────────────────────── -->
       <div class="admin-tab-pane" id="tab-messages">
         <div class="admin-panel">
-          <div class="admin-panel__header"><h2>Contact Messages</h2></div>
+          <div class="admin-panel__header">
+            <h2>Contact Messages</h2>
+            <span id="unreadCount" style="font-size:.85rem;color:var(--text-muted)"></span>
+          </div>
           <div class="admin-panel__body">
             <div class="sns-spinner" id="messagesSpinner"></div>
             <div id="messagesList" style="display:none"></div>
             <div id="messagesEmpty" style="display:none;text-align:center;padding:3rem;color:var(--text-muted)">
               <div style="font-size:3rem;margin-bottom:1rem">💌</div>
               <p>No messages yet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Users Tab ───────────────────────────────────────────────── -->
+      <div class="admin-tab-pane" id="tab-users">
+        <div class="admin-panel">
+          <div class="admin-panel__header">
+            <h2>Admin Users</h2>
+            <button class="btn-primary-admin" onclick="openAddUser()">+ Add User</button>
+          </div>
+          <div class="admin-panel__body">
+            <div class="sns-spinner" id="usersSpinner"></div>
+            <div class="admin-table-wrap" id="usersTableWrap" style="display:none">
+              <table class="admin-table">
+                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+                <tbody id="usersBody"></tbody>
+              </table>
+            </div>
+            <div id="usersEmpty" style="display:none;text-align:center;padding:3rem;color:var(--text-muted)">
+              <div style="font-size:3rem;margin-bottom:1rem">👥</div>
+              <p>No users found.</p>
             </div>
           </div>
         </div>
@@ -182,6 +206,18 @@
               </div>
               <button type="submit" class="btn-primary-admin">Update Password</button>
             </form>
+          </div>
+        </div>
+
+        <div class="admin-panel" style="max-width:480px;margin-top:1.5rem">
+          <div class="admin-panel__header"><h2>Product Categories</h2></div>
+          <div class="admin-panel__body">
+            <div id="categoriesList" style="margin-bottom:1rem"></div>
+            <div style="display:flex;gap:.5rem">
+              <input type="text" id="newCategoryName" class="admin-input-field" placeholder="New category name" style="flex:1">
+              <button class="btn-primary-admin" onclick="addCategory()">Add</button>
+            </div>
+            <div id="catAlert" style="display:none;margin-top:.7rem;padding:.6rem 1rem;border-radius:8px;font-size:.85rem"></div>
           </div>
         </div>
 
@@ -240,12 +276,8 @@
           <div class="col-sm-6">
             <div class="admin-form-group">
               <label class="admin-label">Category *</label>
-              <select name="category" id="pCategory" class="admin-select-field">
-                <option value="cookies">🍪 Cookies</option>
-                <option value="cupcakes">🧁 Cupcakes</option>
-                <option value="woof_treats">🐾 Woof Treats</option>
-                <option value="pur_treats">🐱 Pur Treats</option>
-                <option value="other">Other</option>
+              <select name="categoryId" id="pCategoryId" class="admin-select-field">
+                <option value="">Loading…</option>
               </select>
             </div>
           </div>
@@ -340,7 +372,76 @@
     </div>
     <div class="admin-modal__body" id="msgModalBody"></div>
     <div class="admin-modal__footer">
+      <button class="btn-delete-admin" id="msgDeleteBtn" onclick="deleteCurrentMessage()">🗑️ Delete</button>
       <button class="btn-secondary-admin" onclick="closeMsgModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── User Modal ─────────────────────────────────────────────────────────── -->
+<div class="admin-modal-overlay" id="userModalOverlay">
+  <div class="admin-modal">
+    <div class="admin-modal__header">
+      <h3 id="userModalTitle">Add User</h3>
+      <button class="modal-close" onclick="closeUserModal()">✕</button>
+    </div>
+    <div class="admin-modal__body">
+      <div id="userAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+      <form id="userForm">
+        <input type="hidden" id="userId">
+        <div class="admin-form-group">
+          <label class="admin-label">Name</label>
+          <input type="text" id="uName" class="admin-input-field" required autocomplete="off">
+        </div>
+        <div class="admin-form-group">
+          <label class="admin-label">Email</label>
+          <input type="email" id="uEmail" class="admin-input-field" required autocomplete="off">
+        </div>
+        <div class="admin-form-group" id="uPasswordGroup">
+          <label class="admin-label">Password</label>
+          <input type="password" id="uPassword" class="admin-input-field" autocomplete="new-password"
+            placeholder="Min 12 chars, upper, lower, number">
+        </div>
+        <div class="admin-form-group">
+          <label class="admin-label">Role</label>
+          <select id="uRole" class="admin-select-field">
+            <option value="editor">Editor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="admin-form-group" id="uActiveGroup" style="display:none">
+          <label class="toggle-row" style="cursor:pointer">
+            <span class="toggle-label">Active</span>
+            <label class="toggle-switch"><input type="checkbox" id="uActive" checked><span class="toggle-slider"></span></label>
+          </label>
+        </div>
+      </form>
+    </div>
+    <div class="admin-modal__footer">
+      <button class="btn-secondary-admin" onclick="closeUserModal()">Cancel</button>
+      <button class="btn-primary-admin" id="userSaveBtn" onclick="saveUser()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Reset Password Modal ───────────────────────────────────────────────── -->
+<div class="admin-modal-overlay" id="resetPwModalOverlay">
+  <div class="admin-modal" style="max-width:420px">
+    <div class="admin-modal__header">
+      <h3>Reset Password</h3>
+      <button class="modal-close" onclick="closeResetPwModal()">✕</button>
+    </div>
+    <div class="admin-modal__body">
+      <p id="resetPwInfo" style="margin-bottom:1rem;font-size:.9rem;color:#374151"></p>
+      <div id="resetPwAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+      <div class="admin-form-group">
+        <label class="admin-label">New Password</label>
+        <input type="password" id="resetPwValue" class="admin-input-field" placeholder="Min 12 chars, upper, lower, number" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="admin-modal__footer">
+      <button class="btn-secondary-admin" onclick="closeResetPwModal()">Cancel</button>
+      <button class="btn-primary-admin" onclick="saveResetPw()">Set Password</button>
     </div>
   </div>
 </div>
