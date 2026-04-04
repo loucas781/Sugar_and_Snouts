@@ -59,7 +59,41 @@ async function loadSection(endpoint, gridId, sectionId) {
   } catch { /* no-op */ }
 }
 
+async function applySiteImages() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+
+    // Hero background
+    if (s.img_hero_bg) {
+      const heroBg = document.getElementById('heroBg')
+      if (heroBg) heroBg.style.backgroundImage = `url('${s.img_hero_bg}')`
+    }
+
+    // Hero tagline
+    if (s.hero_tagline) {
+      const subEl = document.querySelector('.hero-sub-heading')
+      if (subEl) subEl.textContent = s.hero_tagline
+    }
+
+    // Example images
+    const imageMap = {
+      img_example_cookies:  'imgExampleCookies',
+      img_example_cupcakes: 'imgExampleCupcakes',
+      img_example_woof:     'imgExampleWoof',
+      img_example_pur:      'imgExamplePur',
+    }
+    Object.entries(imageMap).forEach(([settingKey, elId]) => {
+      if (s[settingKey]) {
+        const el = document.getElementById(elId)
+        if (el) el.src = s[settingKey]
+      }
+    })
+
+  } catch { /* no-op */ }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  applySiteImages()
   loadSection('/api/products?featured=1&limit=4',     'featuredGrid',     'featured-section')
   loadSection('/api/products?new=1&limit=4',           'newGrid',          'new-section')
   loadSection('/api/products?recommended=1&limit=4',   'recommendedGrid',  'recommended-section')

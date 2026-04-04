@@ -70,6 +70,12 @@ function serializeProduct(p) {
 
 // ── Public routes ─────────────────────────────────────────────────────────────
 
+// GET /api/products/categories — public list of categories (must be before /:id)
+router.get('/categories', (req, res) => {
+  const cats = db.prepare('SELECT * FROM product_categories ORDER BY sort_order ASC, name ASC').all()
+  res.json(cats)
+})
+
 // GET /api/products — public product listing
 router.get('/', (req, res) => {
   const { category, featured, recommended, new: isNew, limit } = req.query
@@ -213,12 +219,6 @@ router.delete('/admin/:id', requireAuth, (req, res) => {
 })
 
 // ── Product Categories ────────────────────────────────────────────────────────
-
-// GET /api/products/categories — public list of categories
-router.get('/categories', (req, res) => {
-  const cats = db.prepare('SELECT * FROM product_categories ORDER BY sort_order ASC, name ASC').all()
-  res.json(cats)
-})
 
 // POST /api/admin/categories — create category (admin)
 router.post('/admin/categories', requireAuth, (req, res) => {

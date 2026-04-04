@@ -96,6 +96,11 @@ const uploadPath = process.env.UPLOAD_PATH
   ? path.resolve(process.env.UPLOAD_PATH)
   : path.join(__dirname, '../uploads')
 app.use('/uploads', express.static(uploadPath))
+// Site images (admin-uploaded homepage images)
+const siteImagesPath = process.env.SITE_IMAGES_PATH
+  ? path.resolve(process.env.SITE_IMAGES_PATH)
+  : path.join(__dirname, '../site-images')
+app.use('/site-images', express.static(siteImagesPath))
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -149,6 +154,7 @@ app.use('/api/products',     require('./routes/products'))
 app.use('/api/orders',       require('./routes/orders'))
 app.use('/api/contact',      require('./routes/contact'))
 app.use('/api/admin/users',  require('./routes/users'))
+app.use('/api/settings',     require('./routes/settings'))
 
 // ─── Page routes ──────────────────────────────────────────────────────────────
 const pub = (file) => path.join(__dirname, '../public', file)

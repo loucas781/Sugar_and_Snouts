@@ -165,6 +165,20 @@ function migrate() {
     console.log('  ✓  Default product categories seeded')
   }
 
+  // ── Seed default app preferences if none exist ──────────────────────────────
+  const prefCount = db.prepare('SELECT COUNT(*) as c FROM app_preferences').get()
+  if (prefCount.c === 0) {
+    const defaults = [
+      ['shop_open',           '1'],
+      ['announcement',        ''],
+      ['announcement_active', '0'],
+      ['hero_tagline',        'Baked goods for people and pets, joining you together for a sweet treat 🍪 🧁'],
+    ]
+    const insertPref = db.prepare("INSERT OR IGNORE INTO app_preferences (key, value) VALUES (?, ?)")
+    defaults.forEach(([k, v]) => insertPref.run(k, v))
+    console.log('  ✓  Default app preferences seeded')
+  }
+
   // ── Seed default admin if none exists ────────────────────────────────────
   const count = db.prepare('SELECT COUNT(*) as c FROM admin_users').get()
   if (count.c === 0) {

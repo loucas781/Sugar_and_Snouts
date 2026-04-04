@@ -262,10 +262,24 @@ async function initAdminLink() {
   } catch { /* not authenticated or no nav — no-op */ }
 }
 
+// ── Announcement banner (shared across all public pages) ─────────────────────
+async function initAnnouncement() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    if (s.announcement_active === '1' && s.announcement) {
+      const banner = document.createElement('div')
+      banner.className = 'sns-announcement'
+      banner.textContent = s.announcement
+      document.body.insertBefore(banner, document.body.firstChild)
+    }
+  } catch { /* no-op */ }
+}
+
 // ── Init on DOM ready ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initVersionTag(document.getElementById('versionTag'))
   initCartDrawer()
   initOrderModal()
   initAdminLink()
+  initAnnouncement()
 })

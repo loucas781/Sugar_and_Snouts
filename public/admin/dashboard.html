@@ -43,7 +43,10 @@
     </nav>
 
     <div class="admin-sidebar__footer">
-      <div id="versionTag"></div>
+      <a href="/" class="admin-view-site-btn" target="_blank" rel="noopener">
+        <span>🌐</span> View Website
+      </a>
+      <div id="versionTag" style="margin-top:.6rem"></div>
     </div>
   </aside>
 
@@ -191,7 +194,47 @@
 
       <!-- ── Settings Tab ─────────────────────────────────────────────── -->
       <div class="admin-tab-pane" id="tab-settings">
-        <div class="admin-panel" style="max-width:480px">
+
+        <!-- Site Settings -->
+        <div class="admin-panel" style="max-width:560px">
+          <div class="admin-panel__header"><h2>Site Settings</h2></div>
+          <div class="admin-panel__body">
+            <div id="siteSettingsAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+
+            <div class="admin-form-group">
+              <label class="admin-label">Hero Tagline</label>
+              <textarea id="settingHeroTagline" class="admin-textarea-field" rows="2" placeholder="Tagline shown under the main heading on the home page"></textarea>
+            </div>
+
+            <div class="toggle-row" style="margin-bottom:1rem">
+              <span class="toggle-label" style="font-size:.9rem;font-weight:600">Shop Open for Orders</span>
+              <label class="toggle-switch"><input type="checkbox" id="settingShopOpen" checked><span class="toggle-slider"></span></label>
+            </div>
+
+            <div class="admin-form-group">
+              <label class="admin-label">Announcement Banner</label>
+              <input type="text" id="settingAnnouncement" class="admin-input-field" placeholder="e.g. Shop closed for the bank holiday weekend — back Monday!" maxlength="200">
+            </div>
+            <div class="toggle-row" style="margin-bottom:1.2rem">
+              <span class="toggle-label" style="font-size:.9rem">Show announcement on site</span>
+              <label class="toggle-switch"><input type="checkbox" id="settingAnnouncementActive"><span class="toggle-slider"></span></label>
+            </div>
+
+            <button class="btn-primary-admin" onclick="saveSiteSettings()">Save Settings</button>
+          </div>
+        </div>
+
+        <!-- Site Images -->
+        <div class="admin-panel" style="max-width:560px;margin-top:1.5rem">
+          <div class="admin-panel__header"><h2>Site Images</h2></div>
+          <div class="admin-panel__body">
+            <p style="font-size:.85rem;color:#6b7280;margin-bottom:1.2rem">Upload custom images for the home page. Leave blank to use the original defaults.</p>
+            <div id="siteImagesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem"></div>
+          </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="admin-panel" style="max-width:480px;margin-top:1.5rem">
           <div class="admin-panel__header"><h2>Change Password</h2></div>
           <div class="admin-panel__body">
             <div id="pwAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
@@ -209,6 +252,7 @@
           </div>
         </div>
 
+        <!-- Product Categories -->
         <div class="admin-panel" style="max-width:480px;margin-top:1.5rem">
           <div class="admin-panel__header"><h2>Product Categories</h2></div>
           <div class="admin-panel__body">
@@ -221,10 +265,21 @@
           </div>
         </div>
 
+        <!-- Build Info -->
         <div class="admin-panel" style="max-width:480px;margin-top:1.5rem">
           <div class="admin-panel__header"><h2>Build Info</h2></div>
           <div class="admin-panel__body" id="buildInfo" style="font-size:.9rem;color:#374151"></div>
         </div>
+
+        <!-- Cache -->
+        <div class="admin-panel" style="max-width:480px;margin-top:1.5rem">
+          <div class="admin-panel__header"><h2>Cache</h2></div>
+          <div class="admin-panel__body">
+            <p style="font-size:.88rem;color:#6b7280;margin-bottom:1rem">Clear cached pages and service worker data if you notice stale content.</p>
+            <button class="btn-secondary-admin" onclick="clearAdminCache()">🗑️ Clear Cache & Reload</button>
+          </div>
+        </div>
+
       </div>
 
     </div><!-- /admin-content -->

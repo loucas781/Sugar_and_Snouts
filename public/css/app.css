@@ -859,3 +859,127 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
 .admin-tab:hover { color: var(--dark); }
 .admin-tab-pane { display: none; }
 .admin-tab-pane.active { display: block; }
+
+/* ── Announcement banner ────────────────────────────────────────────────────── */
+.sns-announcement {
+  background: var(--dark);
+  color: var(--gold);
+  text-align: center;
+  padding: .55rem 1rem;
+  font-size: .9rem;
+  font-family: 'Old Standard TT', serif;
+  letter-spacing: .01em;
+  position: relative;
+  z-index: 1001;
+}
+
+/* ── Admin grid helpers (subset of Bootstrap grid for admin-only pages) ─────── */
+.row { display: flex; flex-wrap: wrap; margin-right: -.5rem; margin-left: -.5rem; }
+.col-12, [class^="col-"] { padding-right: .5rem; padding-left: .5rem; box-sizing: border-box; width: 100%; }
+@media (min-width: 576px) {
+  .col-sm-4 { width: 33.333%; }
+  .col-sm-6 { width: 50%; }
+}
+
+/* ── View Site button in admin sidebar ──────────────────────────────────────── */
+.admin-view-site-btn {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .55rem .9rem;
+  background: rgba(249,214,138,.15);
+  color: var(--gold) !important;
+  border-radius: 8px;
+  font-size: .85rem;
+  text-decoration: none;
+  transition: background .2s;
+}
+.admin-view-site-btn:hover { background: rgba(249,214,138,.28); color: var(--gold) !important; }
+
+/* ── Site image slot cards ──────────────────────────────────────────────────── */
+.site-image-slot {
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: .9rem;
+}
+.site-img-preview-wrap {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: .4rem;
+}
+.site-img-preview { width: 100%; height: 100%; object-fit: cover; }
+.site-img-placeholder {
+  font-size: 2rem;
+  color: #9ca3af;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/*────────────────────────────────────────────────────────────────────────────
+  MOBILE / RESPONSIVE FIXES
+────────────────────────────────────────────────────────────────────────────*/
+
+/* ── Admin tabs: scroll horizontally on small screens ───────────────────────── */
+@media (max-width: 600px) {
+  .admin-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+  .admin-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: .6rem 1rem;
+    font-size: .82rem;
+  }
+  .admin-product-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .75rem; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .admin-modal { border-radius: 12px 12px 0 0; }
+  .admin-modal-overlay { align-items: flex-end; padding: 0; }
+}
+
+/* ── Public site — hero sub-heading contrast ────────────────────────────────── */
+.hero-sub-heading {
+  color: rgba(255, 255, 255, 0.92) !important;
+  text-shadow: 0 1px 4px rgba(0,0,0,.5);
+}
+
+/* ── Public site — nav toggler icon visible on white nav ────────────────────── */
+.navbar-toggler {
+  border-color: rgba(35,35,35,.25) !important;
+  padding: .35rem .6rem;
+}
+.navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(35,35,35,0.75)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+}
+
+/* ── Public site — info text on coloured section backgrounds ────────────────── */
+@media (max-width: 768px) {
+  /* Gold / range section */
+  .bgc-3409 .info-text { color: rgba(35,35,35,.85) !important; }
+  /* Blue / examples section */
+  .bgc-6728 h3 { color: rgba(35,35,35,1) !important; }
+  /* Pink section */
+  .bgc-2941 p { color: rgba(35,35,35,.85) !important; }
+
+  /* General mobile nav improvements */
+  .sns-nav .navbar-collapse { background: white; padding: .5rem 1rem 1rem; border-top: 1px solid #f0f0f0; }
+  .sns-nav .nav-link { padding: .6rem .8rem !important; }
+  .sns-nav .cart-btn { margin-top: .5rem; width: 100%; }
+
+  /* Product card add button always full row on mobile */
+  .product-card__footer { flex-direction: column; align-items: flex-start; gap: .5rem; }
+  .product-card__add { width: 100%; text-align: center; }
+
+  /* Category filter wraps cleanly */
+  .category-filter { gap: .4rem; }
+  .category-btn { font-size: .82rem; padding: .38rem .9rem; }
+}

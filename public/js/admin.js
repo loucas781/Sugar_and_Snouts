@@ -75,7 +75,7 @@ function switchTab(name) {
   if (name === 'orders')   loadOrders()
   if (name === 'messages') loadMessages()
   if (name === 'users')    loadUsers()
-  if (name === 'settings') { loadBuildInfo(); loadCategories() }
+  if (name === 'settings') { loadBuildInfo(); loadCategories(); loadSiteSettings(); loadSiteImages() }
   closeSidebar()
 }
 
@@ -870,6 +870,112 @@ document.addEventListener('click', (e) => {
   if (e.target.id === 'userModalOverlay')    closeUserModal()
   if (e.target.id === 'resetPwModalOverlay') closeResetPwModal()
 })
+
+// ── Site Settings ─────────────────────────────────────────────────────────────
+async function loadSiteSettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const taglineEl = document.getElementById('settingHeroTagline')
+    const shopOpenEl = document.getElementById('settingShopOpen')
+    const announcementEl = document.getElementById('settingAnnouncement')
+    const announcementActiveEl = document.getElementById('settingAnnouncementActive')
+
+    if (taglineEl)           taglineEl.value       = s.hero_tagline || ''
+    if (shopOpenEl)          shopOpenEl.checked    = s.shop_open !== '0'
+    if (announcementEl)      announcementEl.value  = s.announcement || ''
+    if (announcementActiveEl) announcementActiveEl.checked = s.announcement_active === '1'
+  } catch { /* no-op */ }
+}
+
+async function saveSiteSettings() {
+  const al = document.getElementById('siteSettingsAlert')
+  al.style.display = 'none'
+
+  const body = {
+    hero_tagline:         document.getElementById('settingHeroTagline')?.value || '',
+    shop_open:            document.getElementById('settingShopOpen')?.checked ? '1' : '0',
+    announcement:         document.getElementById('settingAnnouncement')?.value || '',
+    announcement_active:  document.getElementById('settingAnnouncementActive')?.checked ? '1' : '0',
+  }
+
+  try {
+    const res  = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ Settings saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── Site Images ───────────────────────────────────────────────────────────────
+async function loadSiteImages() {
+  const grid = document.getElementById('siteImagesGrid')
+  if (!grid) return
+  try {
+    const slots = await fetch('/api/settings/images').then(r => r.json())
+    grid.innerHTML = slots.map(slot => `
+      <div class="site-image-slot" id="imgSlot_${slot.key}">
+        <div style="font-size:.8rem;font-weight:600;color:#374151;margin-bottom:.5rem">${slot.label}</div>
+        <div class="site-img-preview-wrap">
+          ${slot.currentUrl
+            ? `<img src="${slot.currentUrl}?t=${Date.now()}" class="site-img-preview" alt="${slot.label}">`
+            : `<div class="site-img-placeholder">🖼️<div style="font-size:.7rem;margin-top:.3rem;color:#9ca3af">Default image</div></div>`
+          }
+        </div>
+        <div style="display:flex;gap:.4rem;margin-top:.5rem">
+          <label class="btn-primary-admin" style="cursor:pointer;font-size:.8rem;padding:.35rem .8rem">
+            Upload
+            <input type="file" accept="image/*" style="display:none" onchange="uploadSiteImage('${slot.key}', this)">
+          </label>
+          ${slot.currentUrl ? `<button class="btn-delete-admin" style="font-size:.8rem;padding:.35rem .8rem" onclick="removeSiteImage('${slot.key}')">Remove</button>` : ''}
+        </div>
+      </div>`).join('')
+  } catch { /* no-op */ }
+}
+
+async function uploadSiteImage(key, input) {
+  const file = input.files[0]
+  if (!file) return
+  const slot = document.getElementById(`imgSlot_${key}`)
+  const fd = new FormData()
+  fd.append('image', file)
+  try {
+    const res  = await fetch(`/api/settings/images/${key}`, { method: 'POST', body: fd })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Upload failed')
+    showToast('Image updated!', 'success')
+    loadSiteImages()
+  } catch (err) {
+    showToast(err.message, 'error')
+  }
+}
+
+async function removeSiteImage(key) {
+  if (!confirm('Remove custom image and revert to the default?')) return
+  try {
+    const res = await fetch(`/api/settings/images/${key}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error('Remove failed')
+    showToast('Reverted to default', 'success')
+    loadSiteImages()
+  } catch (err) {
+    showToast(err.message, 'error')
+  }
+}
+
+// ── Clear Cache ───────────────────────────────────────────────────────────────
+function clearAdminCache() {
+  if ('caches' in window) {
+    caches.keys().then(keys => keys.forEach(k => caches.delete(k)))
+  }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()))
+  }
+  showToast('Cache cleared — reloading…', 'success')
+  setTimeout(() => window.location.reload(true), 800)
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', initAdmin)
