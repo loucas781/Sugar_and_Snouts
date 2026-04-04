@@ -24,11 +24,11 @@ function showToast(msg, type = '') {
   if (!toast) {
     toast = document.createElement('div')
     toast.id = 'snsToast'
-    toast.className = 'sns-toast'
     document.body.appendChild(toast)
   }
-  toast.textContent = msg
+  const icon = type === 'error' ? '✕' : '✓'
   toast.className = `sns-toast ${type}`
+  toast.innerHTML = `<span class="sns-toast__icon">${icon}</span><span class="sns-toast__msg">${msg}</span>`
   requestAnimationFrame(() => toast.classList.add('show'))
   clearTimeout(_toastTimer)
   _toastTimer = setTimeout(() => toast.classList.remove('show'), 3000)
