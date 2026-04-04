@@ -24,6 +24,7 @@ async function compressImage(filePath) {
   const outPath = path.join(dir, `${base}.jpg`)
 
   await sharp(filePath)
+    .rotate()                         // auto-rotate from EXIF orientation, then strip tag
     .resize(MAX_DIMENSION, MAX_DIMENSION, {
       fit:                'inside',   // preserves aspect ratio
       withoutEnlargement: true,       // never upscale small images
