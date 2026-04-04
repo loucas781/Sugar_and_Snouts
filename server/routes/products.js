@@ -244,4 +244,11 @@ router.delete('/admin/categories/:id', requireAuth, (req, res) => {
   res.json({ ok: true })
 })
 
+// ── Multer error handler ──────────────────────────────────────────────────────
+router.use((err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Image too large — max 8 MB' })
+  if (err) return res.status(400).json({ error: err.message || 'Upload failed' })
+  next()
+})
+
 module.exports = router

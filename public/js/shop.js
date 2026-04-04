@@ -18,9 +18,10 @@ function productCardHTML(p) {
     p.offerPrice    ? `<span class="tag tag-offer">On Offer</span>` : '',
   ].filter(Boolean).join('')
 
+  const emoji = getCategoryEmoji(p.category)
   const img = p.imagePath
-    ? `<img src="${p.imagePath}" class="product-card__img" alt="${p.name}" loading="lazy">`
-    : `<div class="product-card__img-placeholder">${getCategoryEmoji(p.category)}</div>`
+    ? `<img src="${p.imagePath}" class="product-card__img" alt="${p.name}" loading="lazy" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=\\'product-card__img-placeholder\\'>${emoji}</div>')">`
+    : `<div class="product-card__img-placeholder">${emoji}</div>`
 
   const limit = p.quantityLimit
     ? `<div class="limit-badge">Max ${p.quantityLimit} per order</div>`

@@ -172,18 +172,20 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
 
 .product-card__img {
   width: 100%;
-  aspect-ratio: 4/3;
+  height: 200px;
   object-fit: cover;
   background: var(--pink);
+  flex-shrink: 0;
 }
 .product-card__img-placeholder {
   width: 100%;
-  aspect-ratio: 4/3;
+  height: 200px;
   background: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 3rem;
+  flex-shrink: 0;
 }
 
 .product-card__body {
@@ -651,12 +653,12 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
   position: relative;
 }
 .admin-product-card__img {
-  width: 100%; aspect-ratio: 16/9;
+  width: 100%; height: 160px;
   object-fit: cover;
   background: linear-gradient(135deg, var(--pink), var(--blue));
 }
 .admin-product-card__img-placeholder {
-  width: 100%; aspect-ratio: 16/9;
+  width: 100%; height: 160px;
   background: linear-gradient(135deg, var(--pink), var(--blue));
   display: flex; align-items: center; justify-content: center;
   font-size: 2.5rem;
@@ -725,11 +727,15 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
   padding: 1.1rem 1.4rem;
   border-radius: 16px 16px 0 0;
   display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 1;
 }
 .admin-modal__header h3 { margin: 0; font-size: 1rem; font-weight: 600; }
 .modal-close { background: none; border: none; color: white; font-size: 1.4rem; cursor: pointer; line-height: 1; }
 .admin-modal__body { padding: 1.4rem; }
-.admin-modal__footer { padding: 1rem 1.4rem; border-top: 1px solid #eee; display: flex; gap: .6rem; justify-content: flex-end; }
+.admin-modal__footer {
+  padding: 1rem 1.4rem; border-top: 1px solid #eee; display: flex; gap: .6rem; justify-content: flex-end;
+  position: sticky; bottom: 0; z-index: 1; background: white;
+}
 
 /* Admin form */
 .admin-form-group { margin-bottom: 1rem; }
@@ -944,10 +950,14 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
     padding: .6rem 1rem;
     font-size: .82rem;
   }
-  .admin-product-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .75rem; }
+  .admin-product-grid { grid-template-columns: repeat(2, 1fr); gap: .75rem; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-card__value { font-size: 1.5rem; }
   .admin-modal { border-radius: 12px 12px 0 0; }
   .admin-modal-overlay { align-items: flex-end; padding: 0; }
+  .admin-modal__header { border-radius: 12px 12px 0 0; }
+  .admin-panel__header { flex-wrap: wrap; gap: .5rem; }
+  .admin-panel__header h2 { font-size: .9rem; }
 }
 
 /* ── Public site — hero sub-heading contrast ────────────────────────────────── */
