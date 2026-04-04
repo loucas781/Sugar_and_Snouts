@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sugar & Snouts — LXC In-Container Install Script
-# Called by the host script via: pct exec <ctid> -- bash /tmp/sugarandsnouts-install.sh <env> <admin_email> <admin_password>
+# Called by the host script via: pct exec <ctid> -- bash /tmp/sugarandsnouts-install.sh <env>
 # Do NOT run this directly on your workstation.
 
 set -euo pipefail
@@ -14,11 +14,9 @@ msg_error() { echo -e "  ✖   ${RD}${1}${CL}"; exit 1; }
 
 # ── Environment ────────────────────────────────────────────────────────────────
 APP_ENV="${1:-production}"
-ADMIN_EMAIL="${2:-admin@sugarandsnouts.co.uk}"
-ADMIN_PASSWORD="${3:-Admin1234!}"
 
 if [[ "$APP_ENV" != "development" && "$APP_ENV" != "staging" && "$APP_ENV" != "production" ]]; then
-  echo "Usage: $0 [development|staging|production] [admin_email] [admin_password]"; exit 1
+  echo "Usage: $0 [development|staging|production]"; exit 1
 fi
 
 COOKIE_SECURE="false"
@@ -98,14 +96,11 @@ APP_ENV=${APP_ENV}
 APP_URL=http://${SERVER_IP}:3000
 JWT_SECRET=${JWT_SECRET}
 PASSWORD_PEPPER=${PASSWORD_PEPPER}
-ADMIN_EMAIL=${ADMIN_EMAIL}
-ADMIN_PASSWORD=${ADMIN_PASSWORD}
 DATABASE_PATH=/opt/sugarandsnouts/data/sugarandsnouts.db
 UPLOAD_PATH=/opt/sugarandsnouts/uploads
 COOKIE_SECURE=${COOKIE_SECURE}
 TRUST_PROXY=false
 COOKIE_MAX_AGE_HOURS=72
-CONTACT_EMAIL=${ADMIN_EMAIL}
 ENVEOF
 
 chmod 600 /opt/sugarandsnouts/.env.${APP_ENV}
@@ -189,6 +184,5 @@ chmod +x /opt/sugarandsnouts/update.sh
 echo ""
 msg_ok "Sugar & Snouts installation complete — running at http://localhost:3000"
 echo ""
-echo "  💡  Admin panel: http://$(hostname -I | awk '{print $1}'):3000/admin/"
-echo "  💡  Login with: ${ADMIN_EMAIL}"
+echo "  💡  Visit http://$(hostname -I | awk '{print $1}'):3000/admin/setup to create your admin account"
 echo ""

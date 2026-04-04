@@ -874,11 +874,11 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
 }
 
 /* ── Admin grid helpers (subset of Bootstrap grid for admin-only pages) ─────── */
-.row { display: flex; flex-wrap: wrap; margin-right: -.5rem; margin-left: -.5rem; }
-.col-12, [class^="col-"] { padding-right: .5rem; padding-left: .5rem; box-sizing: border-box; width: 100%; }
+.admin-body .row { display: flex; flex-wrap: wrap; margin-right: -.5rem; margin-left: -.5rem; }
+.admin-body .col-12, .admin-body [class^="col-"] { padding-right: .5rem; padding-left: .5rem; box-sizing: border-box; width: 100%; }
 @media (min-width: 576px) {
-  .col-sm-4 { width: 33.333%; }
-  .col-sm-6 { width: 50%; }
+  .admin-body .col-sm-4 { width: 33.333%; }
+  .admin-body .col-sm-6 { width: 50%; }
 }
 
 /* ── View Site button in admin sidebar ──────────────────────────────────────── */

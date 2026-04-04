@@ -179,30 +179,8 @@ function migrate() {
     console.log('  ✓  Default app preferences seeded')
   }
 
-  // ── Seed default admin if none exists ────────────────────────────────────
-  const count = db.prepare('SELECT COUNT(*) as c FROM admin_users').get()
-  if (count.c === 0) {
-    const { hashPassword } = require('../auth-utils')
-    const email    = process.env.ADMIN_EMAIL    || 'admin@sugarandsnouts.co.uk'
-    const password = process.env.ADMIN_PASSWORD || 'Admin1234!'
-
-    // hashPassword is async — run synchronously for seed via child_process trick
-    // or use the sync bcrypt path only here in migration
-    const bcrypt = require('bcryptjs')
-    const pepper  = process.env.PASSWORD_PEPPER || ''
-    const crypto  = require('crypto')
-    const peppered = pepper
-      ? crypto.createHmac('sha256', pepper).update(password).digest('hex')
-      : password
-    const hash = bcrypt.hashSync(peppered, 12)
-
-    db.prepare(`
-      INSERT INTO admin_users (id, name, email, password, role, is_active, token_version)
-      VALUES (?, ?, ?, ?, 'admin', 1, 0)
-    `).run(uuidv4(), 'Admin', email.toLowerCase().trim(), hash)
-    console.log(`  ✓  Default admin created: ${email}`)
-    console.log(`  ⚠   Change the admin password at first login!`)
-  }
+  // Admin account is created via the first-run setup UI at /admin/setup
+  // No default admin is seeded here — visit /admin/ on a fresh install to get started.
 
   console.log('  ✓  Database migration complete')
 }
