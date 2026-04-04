@@ -6,6 +6,7 @@ const multer  = require('multer')
 const { v4: uuidv4 } = require('uuid')
 const db      = require('../db/connection')
 const { requireAuth } = require('../middleware/auth')
+const { compressImage } = require('../utils/compressImage')
 
 const router = express.Router()
 
@@ -25,7 +26,7 @@ const storage = multer.diskStorage({
 })
 const upload = multer({
   storage,
-  limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB — sharp compresses after upload
   fileFilter: (req, file, cb) => {
     const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
     const ext = path.extname(file.originalname).toLowerCase()
@@ -111,7 +112,7 @@ router.get('/admin/all', requireAuth, (req, res) => {
 })
 
 // POST /api/admin/products — create product
-router.post('/admin', requireAuth, upload.single('image'), (req, res) => {
+router.post('/admin', requireAuth, upload.single('image'), async (req, res) => {
   const {
     name, description, categoryId, price, offerPrice, offerExpiresAt,
     isAvailable, isFeatured, isRecommended, isNew, quantityLimit, sortOrder
@@ -121,7 +122,16 @@ router.post('/admin', requireAuth, upload.single('image'), (req, res) => {
   if (!categoryId) return res.status(400).json({ error: 'Category is required' })
 
   const id = uuidv4()
-  const imagePath = req.file ? req.file.filename : null
+  let imagePath = req.file ? req.file.filename : null
+
+  if (req.file) {
+    try {
+      const compressed = await compressImage(req.file.path)
+      imagePath = path.basename(compressed)
+    } catch (e) {
+      console.error('Image compression failed:', e.message)
+    }
+  }
 
   db.prepare(`
     INSERT INTO products (id, name, description, category, category_id, price, offer_price, offer_expires_at,
@@ -185,7 +195,7 @@ router.put('/admin/:id', requireAuth, (req, res) => {
 })
 
 // POST /api/admin/products/:id/image — upload/replace product image
-router.post('/admin/:id/image', requireAuth, upload.single('image'), (req, res) => {
+router.post('/admin/:id/image', requireAuth, upload.single('image'), async (req, res) => {
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id)
   if (!product) return res.status(404).json({ error: 'Product not found' })
   if (!req.file) return res.status(400).json({ error: 'No image file provided' })
@@ -196,8 +206,16 @@ router.post('/admin/:id/image', requireAuth, upload.single('image'), (req, res) 
     if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath)
   }
 
+  let imagePath = req.file.filename
+  try {
+    const compressed = await compressImage(req.file.path)
+    imagePath = path.basename(compressed)
+  } catch (e) {
+    console.error('Image compression failed:', e.message)
+  }
+
   db.prepare("UPDATE products SET image_path = ?, updated_at = datetime('now') WHERE id = ?")
-    .run(req.file.filename, req.params.id)
+    .run(imagePath, req.params.id)
 
   const updated = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id)
   res.json(serializeProduct(updated))

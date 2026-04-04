@@ -110,7 +110,9 @@ async function loadHomeExamples() {
       const src = ex.imageUrl || EXAMPLE_DEFAULTS[ex.id] || '/img/IMG_9755 2.jpg'
       return `
         <div class="col-md-6 col-lg-3 col-sm-6">
-          <img src="${src}" class="img-fluid img-protected mx-auto d-block mb-4" alt="${ex.title}" width="267" height="190" style="object-fit:cover">
+          <div class="mb-4" style="width:100%;height:220px;overflow:hidden;border-radius:4px;">
+            <img src="${src}" class="img-protected" alt="${ex.title}" style="width:100%;height:100%;object-fit:cover;display:block;">
+          </div>
           <h3 class="tc-7376 float-lg-none text-center mg-sm">${ex.title}</h3>
         </div>`
     }).join('')

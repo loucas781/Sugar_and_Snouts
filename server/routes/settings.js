@@ -5,6 +5,7 @@ const fs      = require('fs')
 const multer  = require('multer')
 const db      = require('../db/connection')
 const { requireAuth } = require('../middleware/auth')
+const { compressImage } = require('../utils/compressImage')
 
 const router = express.Router()
 
@@ -33,7 +34,7 @@ const siteImageUpload = multer({
       cb(null, `${req.params.key}${ext}`)
     }
   }),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB — sharp compresses after upload
   fileFilter: (req, file, cb) => {
     const allowed = ['.jpg', '.jpeg', '.png', '.webp']
     if (allowed.includes(path.extname(file.originalname).toLowerCase())) cb(null, true)
@@ -115,10 +116,19 @@ router.post('/images/:key', requireAuth, (req, res) => {
     existing.forEach(f => fs.unlinkSync(path.join(siteImagesDir, f)))
   } catch { /* no-op */ }
 
-  siteImageUpload.single('image')(req, res, (err) => {
+  siteImageUpload.single('image')(req, res, async (err) => {
     if (err) return res.status(400).json({ error: err.message })
     if (!req.file) return res.status(400).json({ error: 'No image provided' })
-    res.json({ ok: true, url: `/site-images/${req.file.filename}` })
+
+    let filename = req.file.filename
+    try {
+      const compressed = await compressImage(req.file.path)
+      filename = path.basename(compressed)
+    } catch (e) {
+      console.error('Image compression failed:', e.message)
+    }
+
+    res.json({ ok: true, url: `/site-images/${filename}` })
   })
 })
 
