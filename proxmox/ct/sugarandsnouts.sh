@@ -71,8 +71,6 @@ STATIC_IP=""; STATIC_GW=""; STATIC_CIDR="24"
 CTID=$(pvesh get /cluster/nextid 2>/dev/null || echo "100")
 TEMPLATE_STORAGE="local"
 STORAGE=$(pvesm status -content rootdir 2>/dev/null | awk 'NR>1 {print $1; exit}' || echo "local-lvm")
-ADMIN_EMAIL="admin@sugarandsnouts.co.uk"
-ADMIN_PASSWORD=""
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 check_whiptail() { command -v whiptail &>/dev/null || apt-get install -y -qq whiptail; }
@@ -140,7 +138,6 @@ print_summary() {
   echo -e "${TAB}🌉${TAB}Bridge: ${YWB}${BRIDGE}${CL}"
   print_net_summary
   echo -e "${TAB}🌿${TAB}Environment: ${YWB}${APP_ENV}${CL}"
-  echo -e "${TAB}📧${TAB}Admin email: ${YWB}${ADMIN_EMAIL}${CL}"
   echo ""
 }
 
@@ -186,14 +183,6 @@ if whiptail --backtitle "Sugar & Snouts Install" --title "SETTINGS" --yesno \
     "development" "Local dev / testing" \
     3>&1 1>&2 2>&3) || exit 1
 
-  ADMIN_EMAIL=$(whiptail --backtitle "Sugar & Snouts Install" \
-    --inputbox "Admin email address" 8 58 "$ADMIN_EMAIL" \
-    --title "ADMIN EMAIL" 3>&1 1>&2 2>&3) || exit 1
-
-  ADMIN_PASSWORD=$(whiptail --backtitle "Sugar & Snouts Install" \
-    --passwordbox "Admin password\n(min 12 chars, uppercase, lowercase, number)" 10 58 \
-    --title "ADMIN PASSWORD" 3>&1 1>&2 2>&3) || exit 1
-
   print_summary "Default Settings"
 else
   CTID=$(whiptail --backtitle "Sugar & Snouts Install" --inputbox "Container ID" 8 58 "$CTID" \
@@ -235,14 +224,6 @@ else
     "development" "Local dev / testing" \
     3>&1 1>&2 2>&3) || exit 1
 
-  ADMIN_EMAIL=$(whiptail --backtitle "Sugar & Snouts Install" \
-    --inputbox "Admin email address" 8 58 "$ADMIN_EMAIL" \
-    --title "ADMIN EMAIL" 3>&1 1>&2 2>&3) || exit 1
-
-  ADMIN_PASSWORD=$(whiptail --backtitle "Sugar & Snouts Install" \
-    --passwordbox "Admin password\n(min 12 chars, uppercase, lowercase, number)" 10 58 \
-    --title "ADMIN PASSWORD" 3>&1 1>&2 2>&3) || exit 1
-
   print_summary "Advanced Settings"
 fi
 
@@ -257,9 +238,8 @@ Type: ${TYPE_LABEL}
 OS: Debian 12       Storage: ${STORAGE}
 Disk: ${DISK_SIZE}GB   CPU: ${CORE_COUNT}   RAM: ${RAM_SIZE}MiB
 Bridge: ${BRIDGE}   Network: ${NET_LABEL}
-Environment: ${APP_ENV}
-Admin: ${ADMIN_EMAIL}" \
-  19 62 3>&1 1>&2 2>&3; then
+Environment: ${APP_ENV}" \
+  18 62 3>&1 1>&2 2>&3; then
   echo "Aborted."
   exit 0
 fi
@@ -351,7 +331,7 @@ rm -f "$TMPSCRIPT"
 msg_info "Running Sugar & Snouts install script inside container"
 echo ""
 pct exec "$CTID" -- bash -c \
-  "chmod +x /tmp/sugarandsnouts-install.sh && bash /tmp/sugarandsnouts-install.sh '${APP_ENV}' '${ADMIN_EMAIL}' '${ADMIN_PASSWORD}'"
+  "chmod +x /tmp/sugarandsnouts-install.sh && bash /tmp/sugarandsnouts-install.sh '${APP_ENV}'"
 echo ""
 msg_ok "Sugar & Snouts installed"
 
@@ -374,11 +354,10 @@ echo ""
 echo -e " ${CM}${BOLD}${GN}Installation complete!${CL}"
 echo ""
 echo -e " ${CREATING}${GN}Sugar & Snouts is ready!${CL}"
-echo -e " ${GATEWAY}${BGN}http://${IP}:3000${CL}         (site)"
-echo -e " ${GATEWAY}${BGN}http://${IP}:3000/admin/${CL}  (admin panel)"
+echo -e " ${GATEWAY}${BGN}http://${IP}:3000${CL}               (site)"
+echo -e " ${GATEWAY}${BGN}http://${IP}:3000/admin/setup${CL}  (create admin account)"
 echo ""
 echo -e " ${INFO}${YW}Container root password: ${YWB}${CT_PASSWORD:-"(none set)"}${CL}"
-echo -e " ${INFO}${YW}Admin email:    ${YWB}${ADMIN_EMAIL}${CL}"
 echo -e " ${INFO}${YW}Environment:    ${YWB}${APP_ENV}${CL}"
 echo -e " ${INFO}${YW}To update later:${CL}"
 echo -e "${TAB}${TAB}${DGN}pct exec ${CTID} -- bash /opt/sugarandsnouts/update.sh${CL}"
