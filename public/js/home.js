@@ -11,6 +11,8 @@ function productCardHTML(p) {
     p.isNew         ? `<span class="tag tag-new">New</span>` : '',
     p.isRecommended ? `<span class="tag tag-recommended">Recommended</span>` : '',
     p.offerPrice    ? `<span class="tag tag-offer">On Offer</span>` : '',
+    p.isLimitedTime ? `<span class="tag tag-limited">Limited Time Only</span>` : '',
+    p.isOutOfStock  ? `<span class="tag tag-outofstock">Out of Stock</span>` : '',
   ].filter(Boolean).join('')
 
   const img = p.imagePath

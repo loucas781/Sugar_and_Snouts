@@ -60,11 +60,14 @@ function serializeProduct(p) {
     offerPrice:    offerActive ? p.offer_price : null,
     offerExpiresAt: p.offer_expires_at,
     imagePath:     p.image_path ? `/uploads/${path.basename(p.image_path)}` : null,
-    isAvailable:   Boolean(p.is_available),
-    isFeatured:    Boolean(p.is_featured),
-    isRecommended: Boolean(p.is_recommended),
-    isNew:         Boolean(p.is_new),
-    quantityLimit: p.quantity_limit,
+    isAvailable:    Boolean(p.is_available),
+    isFeatured:     Boolean(p.is_featured),
+    isRecommended:  Boolean(p.is_recommended),
+    isNew:          Boolean(p.is_new),
+    isLimitedTime:  Boolean(p.is_limited_time),
+    isOutOfStock:   Boolean(p.is_out_of_stock),
+    stockAmount:    p.stock_amount != null ? p.stock_amount : null,
+    quantityLimit:  p.quantity_limit,
     sortOrder:     p.sort_order,
     createdAt:     p.created_at,
     updatedAt:     p.updated_at,
@@ -117,7 +120,7 @@ router.get('/admin/all', requireAuth, (req, res) => {
 router.post('/admin', requireAuth, upload.single('image'), async (req, res) => {
   const {
     name, description, allergenInfo, ingredients, categoryId, price, offerPrice, offerExpiresAt,
-    isAvailable, isFeatured, isRecommended, isNew, quantityLimit, sortOrder
+    isAvailable, isFeatured, isRecommended, isNew, isLimitedTime, isOutOfStock, stockAmount, quantityLimit, sortOrder
   } = req.body
 
   if (!name || !price) return res.status(400).json({ error: 'Name and price are required' })
@@ -135,11 +138,13 @@ router.post('/admin', requireAuth, upload.single('image'), async (req, res) => {
     }
   }
 
+  const stockVal = stockAmount ? parseInt(stockAmount) : null
+
   db.prepare(`
     INSERT INTO products (id, name, description, allergen_info, ingredients, category, category_id, price,
       offer_price, offer_expires_at, image_path, is_available, is_featured, is_recommended, is_new,
-      quantity_limit, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      is_limited_time, is_out_of_stock, stock_amount, quantity_limit, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, name.trim(), description?.trim() || null,
     allergenInfo?.trim() || null,
@@ -153,6 +158,9 @@ router.post('/admin', requireAuth, upload.single('image'), async (req, res) => {
     isFeatured    === 'true' ? 1 : 0,
     isRecommended === 'true' ? 1 : 0,
     isNew         === 'true' ? 1 : 0,
+    isLimitedTime === 'true' ? 1 : 0,
+    isOutOfStock  === 'true' ? 1 : 0,
+    stockVal,
     quantityLimit ? parseInt(quantityLimit) : null,
     sortOrder ? parseInt(sortOrder) : 0
   )
@@ -168,15 +176,23 @@ router.put('/admin/:id', requireAuth, (req, res) => {
 
   const {
     name, description, allergenInfo, ingredients, categoryId, price, offerPrice, offerExpiresAt,
-    isAvailable, isFeatured, isRecommended, isNew, quantityLimit, sortOrder
+    isAvailable, isFeatured, isRecommended, isNew, isLimitedTime, isOutOfStock, stockAmount, quantityLimit, sortOrder
   } = req.body
+
+  // If admin explicitly sets a new stock_amount, respect is_out_of_stock as provided;
+  // otherwise keep existing out-of-stock state unless explicitly overridden
+  const newStock = stockAmount !== undefined ? (stockAmount !== null && stockAmount !== '' ? parseInt(stockAmount) : null) : product.stock_amount
+  const outOfStock = isOutOfStock !== undefined
+    ? (isOutOfStock ? 1 : 0)
+    : (newStock !== null && newStock !== undefined && newStock <= 0 ? 1 : product.is_out_of_stock)
 
   db.prepare(`
     UPDATE products SET
       name = ?, description = ?, allergen_info = ?, ingredients = ?, category_id = ?, price = ?,
       offer_price = ?, offer_expires_at = ?,
       is_available = ?, is_featured = ?, is_recommended = ?, is_new = ?,
-      quantity_limit = ?, sort_order = ?,
+      is_limited_time = ?, is_out_of_stock = ?,
+      stock_amount = ?, quantity_limit = ?, sort_order = ?,
       updated_at = datetime('now')
     WHERE id = ?
   `).run(
@@ -192,6 +208,9 @@ router.put('/admin/:id', requireAuth, (req, res) => {
     isFeatured  !== undefined ? (isFeatured  ? 1 : 0) : product.is_featured,
     isRecommended !== undefined ? (isRecommended ? 1 : 0) : product.is_recommended,
     isNew !== undefined ? (isNew ? 1 : 0) : product.is_new,
+    isLimitedTime !== undefined ? (isLimitedTime ? 1 : 0) : product.is_limited_time,
+    outOfStock,
+    newStock,
     quantityLimit !== undefined ? (quantityLimit ? parseInt(quantityLimit) : null) : product.quantity_limit,
     sortOrder !== undefined ? parseInt(sortOrder) : product.sort_order,
     req.params.id

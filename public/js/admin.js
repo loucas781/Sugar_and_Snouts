@@ -350,6 +350,8 @@ function productCardHTML(p) {
     p.isFeatured    ? `<span class="tag tag-featured">Fav</span>` : '',
     p.isNew         ? `<span class="tag tag-new">New</span>` : '',
     p.isRecommended ? `<span class="tag tag-recommended">Rec</span>` : '',
+    p.isLimitedTime ? `<span class="tag tag-limited">Limited</span>` : '',
+    p.isOutOfStock  ? `<span class="tag tag-outofstock">Out of Stock</span>` : '',
   ].filter(Boolean).join('')
   const catLabel = p.categoryName || (p.category || '').replace(/_/g, ' ')
   const img = p.imagePath
@@ -364,6 +366,7 @@ function productCardHTML(p) {
         <div class="admin-product-card__name" title="${p.name}">${p.name}</div>
         <div class="admin-product-card__cat">${catLabel}</div>
         <div class="admin-product-card__price">${priceText}</div>
+        ${p.stockAmount != null ? `<div style="font-size:.75rem;color:${p.stockAmount <= 5 ? '#ef4444' : '#9ca3af'};margin-bottom:.4rem">Stock: ${p.stockAmount} remaining</div>` : ''}
         ${p.quantityLimit ? `<div style="font-size:.75rem;color:#9ca3af;margin-bottom:.4rem">Limit: ${p.quantityLimit}/order</div>` : ''}
         ${tags ? `<div class="admin-product-card__tags">${tags}</div>` : ''}
         <div class="admin-product-card__actions">
@@ -399,12 +402,15 @@ function openEditProduct(id) {
   document.getElementById('pPrice').value         = p.price
   document.getElementById('pOfferPrice').value    = p.offerPrice || ''
   document.getElementById('pOfferExpires').value  = p.offerExpiresAt ? p.offerExpiresAt.replace('Z','').slice(0,16) : ''
+  document.getElementById('pStockAmount').value   = p.stockAmount != null ? p.stockAmount : ''
   document.getElementById('pQtyLimit').value      = p.quantityLimit || ''
   document.getElementById('pSortOrder').value     = p.sortOrder ?? 0
-  document.getElementById('pAvailable').checked   = p.isAvailable
-  document.getElementById('pFeatured').checked    = p.isFeatured
-  document.getElementById('pNew').checked         = p.isNew
-  document.getElementById('pRecommended').checked = p.isRecommended
+  document.getElementById('pAvailable').checked    = p.isAvailable
+  document.getElementById('pFeatured').checked     = p.isFeatured
+  document.getElementById('pNew').checked          = p.isNew
+  document.getElementById('pRecommended').checked  = p.isRecommended
+  document.getElementById('pLimitedTime').checked  = p.isLimitedTime
+  document.getElementById('pOutOfStock').checked   = p.isOutOfStock
 
   populateCategorySelect()
   const catSel = document.getElementById('pCategoryId')
@@ -464,8 +470,6 @@ function clearImage() {
 function openCropModal(file) {
   const url = URL.createObjectURL(file)
   const img  = document.getElementById('cropperImg')
-  img.src = url
-  document.getElementById('cropModalOverlay').classList.add('open')
   if (_cropper) { _cropper.destroy(); _cropper = null }
   img.onload = () => {
     _cropper = new Cropper(img, {
@@ -476,6 +480,8 @@ function openCropModal(file) {
       checkOrientation: false,  // sharp handles EXIF rotation server-side
     })
   }
+  img.src = url
+  document.getElementById('cropModalOverlay').classList.add('open')
 }
 
 function applyCrop() {
@@ -517,12 +523,15 @@ async function saveProduct() {
     fd.append('price',         document.getElementById('pPrice').value)
     fd.append('offerPrice',    document.getElementById('pOfferPrice').value)
     fd.append('offerExpiresAt', document.getElementById('pOfferExpires').value)
+    fd.append('stockAmount',   document.getElementById('pStockAmount').value)
     fd.append('quantityLimit', document.getElementById('pQtyLimit').value)
     fd.append('sortOrder',     document.getElementById('pSortOrder').value)
     fd.append('isAvailable',   document.getElementById('pAvailable').checked)
     fd.append('isFeatured',    document.getElementById('pFeatured').checked)
     fd.append('isNew',         document.getElementById('pNew').checked)
     fd.append('isRecommended', document.getElementById('pRecommended').checked)
+    fd.append('isLimitedTime', document.getElementById('pLimitedTime').checked)
+    fd.append('isOutOfStock',  document.getElementById('pOutOfStock').checked)
     if (_newImageFile) fd.append('image', _newImageFile)
 
     let res
@@ -548,12 +557,15 @@ async function saveProduct() {
           price:         parseFloat(document.getElementById('pPrice').value),
           offerPrice:    document.getElementById('pOfferPrice').value ? parseFloat(document.getElementById('pOfferPrice').value) : null,
           offerExpiresAt: document.getElementById('pOfferExpires').value || null,
+          stockAmount:   document.getElementById('pStockAmount').value !== '' ? parseInt(document.getElementById('pStockAmount').value) : null,
           quantityLimit: document.getElementById('pQtyLimit').value ? parseInt(document.getElementById('pQtyLimit').value) : null,
           sortOrder:     parseInt(document.getElementById('pSortOrder').value) || 0,
           isAvailable:   document.getElementById('pAvailable').checked,
           isFeatured:    document.getElementById('pFeatured').checked,
           isNew:         document.getElementById('pNew').checked,
           isRecommended: document.getElementById('pRecommended').checked,
+          isLimitedTime: document.getElementById('pLimitedTime').checked,
+          isOutOfStock:  document.getElementById('pOutOfStock').checked,
         })
       })
     } else {

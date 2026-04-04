@@ -255,6 +255,8 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
 .tag-featured   { background: #fef3c7; color: #92400e; }
 .tag-recommended { background: #dbeafe; color: #1e40af; }
 .tag-offer      { background: #fce7f3; color: #9d174d; }
+.tag-limited    { background: #ffedd5; color: #9a3412; }
+.tag-outofstock { background: #f3f4f6; color: #6b7280; }
 
 /* Limit badge */
 .limit-badge {

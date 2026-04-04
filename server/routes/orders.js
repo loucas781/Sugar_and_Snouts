@@ -40,6 +40,18 @@ router.post('/', (req, res) => {
     const qty = parseInt(item.quantity)
     if (!qty || qty < 1) return res.status(400).json({ error: `Invalid quantity for ${product.name}` })
 
+    if (product.is_out_of_stock) {
+      return res.status(400).json({ error: `${product.name} is currently out of stock` })
+    }
+
+    if (product.stock_amount != null && qty > product.stock_amount) {
+      return res.status(400).json({
+        error: product.stock_amount === 0
+          ? `${product.name} is out of stock`
+          : `Only ${product.stock_amount} of "${product.name}" available`
+      })
+    }
+
     if (product.quantity_limit && qty > product.quantity_limit) {
       return res.status(400).json({
         error: `${product.name} has a limit of ${product.quantity_limit} per order`
@@ -82,6 +94,16 @@ router.post('/', (req, res) => {
     Math.round(total * 100) / 100,
     notes?.trim() || null
   )
+
+  // Deduct stock for products with stock tracking enabled
+  for (const item of validatedItems) {
+    const product = db.prepare('SELECT stock_amount FROM products WHERE id = ?').get(item.productId)
+    if (product && product.stock_amount != null) {
+      const newStock = Math.max(0, product.stock_amount - item.quantity)
+      db.prepare("UPDATE products SET stock_amount = ?, is_out_of_stock = ?, updated_at = datetime('now') WHERE id = ?")
+        .run(newStock, newStock <= 0 ? 1 : 0, item.productId)
+    }
+  }
 
   res.status(201).json({ ok: true, orderId: id, total: Math.round(total * 100) / 100 })
 })
@@ -130,6 +152,19 @@ router.patch('/admin/:id', requireAuth, (req, res) => {
       updated_at = datetime('now')
     WHERE id = ?
   `).run(status || null, adminNotes !== undefined ? adminNotes : null, req.params.id)
+
+  // Restore stock when cancelling an order that wasn't already cancelled
+  if (status === 'cancelled' && order.status !== 'cancelled') {
+    const items = JSON.parse(order.items)
+    for (const item of items) {
+      const product = db.prepare('SELECT stock_amount, is_out_of_stock FROM products WHERE id = ?').get(item.productId)
+      if (product && product.stock_amount != null) {
+        const restored = product.stock_amount + item.quantity
+        db.prepare("UPDATE products SET stock_amount = ?, is_out_of_stock = 0, updated_at = datetime('now') WHERE id = ?")
+          .run(restored, item.productId)
+      }
+    }
+  }
 
   const updated = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id)
   res.json({ ...updated, items: JSON.parse(updated.items) })

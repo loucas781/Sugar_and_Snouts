@@ -17,6 +17,8 @@ function productCardHTML(p) {
     p.isNew         ? `<span class="tag tag-new">New</span>` : '',
     p.isRecommended ? `<span class="tag tag-recommended">Recommended</span>` : '',
     p.offerPrice    ? `<span class="tag tag-offer">On Offer</span>` : '',
+    p.isLimitedTime ? `<span class="tag tag-limited">Limited Time Only</span>` : '',
+    p.isOutOfStock  ? `<span class="tag tag-outofstock">Out of Stock</span>` : '',
   ].filter(Boolean).join('')
 
   const emoji = getCategoryEmoji(p.category)
@@ -44,7 +46,7 @@ function productCardHTML(p) {
           ${detailHint}
           <div class="product-card__footer">
             <div class="product-card__price">${priceHTML}</div>
-            <button class="product-card__add" data-product='${safeProduct}'>Add to Cart</button>
+            <button class="product-card__add" data-product='${safeProduct}'${p.isOutOfStock ? ' disabled' : ''}>Add to Cart</button>
           </div>
         </div>
       </div>

@@ -166,6 +166,18 @@ function migrate() {
     db.exec('ALTER TABLE products ADD COLUMN ingredients TEXT')
     console.log('  ✓  Added column products.ingredients')
   }
+  if (!productCols.includes('is_limited_time')) {
+    db.exec('ALTER TABLE products ADD COLUMN is_limited_time INTEGER NOT NULL DEFAULT 0')
+    console.log('  ✓  Added column products.is_limited_time')
+  }
+  if (!productCols.includes('is_out_of_stock')) {
+    db.exec('ALTER TABLE products ADD COLUMN is_out_of_stock INTEGER NOT NULL DEFAULT 0')
+    console.log('  ✓  Added column products.is_out_of_stock')
+  }
+  if (!productCols.includes('stock_amount')) {
+    db.exec('ALTER TABLE products ADD COLUMN stock_amount INTEGER')
+    console.log('  ✓  Added column products.stock_amount')
+  }
 
   // ── Seed default product categories if none exist ────────────────────────
   const catCount = db.prepare('SELECT COUNT(*) as c FROM product_categories').get()

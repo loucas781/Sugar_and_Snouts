@@ -92,19 +92,21 @@ app.use((req, res, next) => {
     const db = require('./db/connection')
     const pref = db.prepare("SELECT value FROM app_preferences WHERE key = 'maintenance_mode'").get()
     if (pref?.value === '1') {
-      // Allow authenticated admins through so the dashboard keeps working
-      const token = req.cookies?.token
-      if (token) {
-        try {
-          const jwt = require('jsonwebtoken')
-          const payload = jwt.verify(token, process.env.JWT_SECRET)
-          const user = db.prepare(
-            'SELECT id, is_active, token_version FROM admin_users WHERE id = ?'
-          ).get(payload.id)
-          if (user && user.is_active && (user.token_version || 0) === (payload.tv || 0)) {
-            return next()
-          }
-        } catch { /* invalid token — fall through to maintenance */ }
+      // Allow authenticated admins through on API routes so the dashboard keeps working
+      if (req.path.startsWith('/api/')) {
+        const token = req.cookies?.token
+        if (token) {
+          try {
+            const jwt = require('jsonwebtoken')
+            const payload = jwt.verify(token, process.env.JWT_SECRET)
+            const user = db.prepare(
+              'SELECT id, is_active, token_version FROM admin_users WHERE id = ?'
+            ).get(payload.id)
+            if (user && user.is_active && (user.token_version || 0) === (payload.tv || 0)) {
+              return next()
+            }
+          } catch { /* invalid token — fall through to maintenance */ }
+        }
       }
 
       const msgPref = db.prepare("SELECT value FROM app_preferences WHERE key = 'maintenance_message'").get()

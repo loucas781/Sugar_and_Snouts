@@ -703,9 +703,20 @@
               </div>
             </div>
           </div>
-          <div class="admin-form-group" style="margin-bottom:0">
-            <label class="admin-label">Quantity Limit per Order</label>
-            <input type="number" name="quantityLimit" id="pQtyLimit" class="admin-input-field" min="1" placeholder="Leave blank for no limit">
+          <div class="row g-2">
+            <div class="col-sm-6">
+              <div class="admin-form-group" style="margin-bottom:0">
+                <label class="admin-label">Stock Amount</label>
+                <input type="number" name="stockAmount" id="pStockAmount" class="admin-input-field" min="0" placeholder="Leave blank for unlimited">
+                <div style="font-size:.72rem;color:#9ca3af;margin-top:.25rem">Auto marks Sold Out when reaches 0</div>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="admin-form-group" style="margin-bottom:0">
+                <label class="admin-label">Quantity Limit per Order</label>
+                <input type="number" name="quantityLimit" id="pQtyLimit" class="admin-input-field" min="1" placeholder="Leave blank for no limit">
+              </div>
+            </div>
           </div>
         </div>
 
@@ -727,6 +738,14 @@
           <div class="toggle-row">
             <span class="toggle-label">🍰 Recommended</span>
             <label class="toggle-switch"><input type="checkbox" name="isRecommended" id="pRecommended"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">⏳ Limited Time Only</span>
+            <label class="toggle-switch"><input type="checkbox" name="isLimitedTime" id="pLimitedTime"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">🚫 Out of Stock</span>
+            <label class="toggle-switch"><input type="checkbox" name="isOutOfStock" id="pOutOfStock"><span class="toggle-slider"></span></label>
           </div>
         </div>
 
