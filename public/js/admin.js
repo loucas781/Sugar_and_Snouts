@@ -465,7 +465,7 @@ function openCropModal(file) {
   const url = URL.createObjectURL(file)
   const img  = document.getElementById('cropperImg')
   img.src = url
-  document.getElementById('cropModalOverlay').style.display = 'flex'
+  document.getElementById('cropModalOverlay').classList.add('open')
   if (_cropper) { _cropper.destroy(); _cropper = null }
   img.onload = () => {
     _cropper = new Cropper(img, {
@@ -495,7 +495,7 @@ function applyCrop() {
 }
 
 function closeCropModal() {
-  document.getElementById('cropModalOverlay').style.display = 'none'
+  document.getElementById('cropModalOverlay').classList.remove('open')
   if (_cropper) { _cropper.destroy(); _cropper = null }
   document.getElementById('imageInput').value = ''
 }
