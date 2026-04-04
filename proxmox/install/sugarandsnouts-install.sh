@@ -64,6 +64,10 @@ msg_info "Updating npm to latest"
 HOME=/root npm install -g npm --cache /tmp/npm-cache --unsafe-perm --no-audit --no-fund --silent 2>&1 || true
 msg_ok "npm $(npm --version) ready"
 
+msg_info "Installing sharp system dependency (libvips)"
+apt-get install -y -qq libvips-dev 2>&1 | tail -2
+msg_ok "libvips installed"
+
 msg_info "Installing Node.js dependencies"
 cd /opt/sugarandsnouts
 mkdir -p /tmp/npm-cache /tmp/npm-tmp
@@ -173,6 +177,13 @@ git fetch origin
 git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
 
 mkdir -p /tmp/npm-cache
+
+# Ensure libvips is present (required by sharp for image compression)
+if ! dpkg -s libvips-dev &>/dev/null; then
+  echo "Installing libvips (required by sharp)..."
+  apt-get install -y -qq libvips-dev 2>&1 | tail -2
+fi
+
 HOME=/root npm install --omit=dev --cache /tmp/npm-cache --unsafe-perm --no-audit --no-fund
 
 HOME=/root NODE_ENV=${APP_ENV} node server/db/migrate.js
