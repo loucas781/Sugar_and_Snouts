@@ -126,6 +126,15 @@ function migrate() {
       value      TEXT NOT NULL,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- ── Home Examples ─────────────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS home_examples (
+      id         TEXT PRIMARY KEY,
+      title      TEXT NOT NULL,
+      image_path TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `)
 
   // ── Safe column additions for existing DBs (idempotent) ─────────────────
@@ -177,6 +186,20 @@ function migrate() {
     const insertPref = db.prepare("INSERT OR IGNORE INTO app_preferences (key, value) VALUES (?, ?)")
     defaults.forEach(([k, v]) => insertPref.run(k, v))
     console.log('  ✓  Default app preferences seeded')
+  }
+
+  // ── Seed default home examples if none exist ─────────────────────────────────
+  const exCount = db.prepare('SELECT COUNT(*) as c FROM home_examples').get()
+  if (exCount.c === 0) {
+    const defaultExamples = [
+      { id: 'cookies',  title: 'Cookies',     sort_order: 1 },
+      { id: 'cupcakes', title: 'Cupcakes',    sort_order: 2 },
+      { id: 'woof',     title: 'Woof Treats', sort_order: 3 },
+      { id: 'pur',      title: 'Pur Treats',  sort_order: 4 },
+    ]
+    const insertEx = db.prepare('INSERT OR IGNORE INTO home_examples (id, title, sort_order) VALUES (?, ?, ?)')
+    defaultExamples.forEach(e => insertEx.run(e.id, e.title, e.sort_order))
+    console.log('  ✓  Default home examples seeded')
   }
 
   // Admin account is created via the first-run setup UI at /admin/setup

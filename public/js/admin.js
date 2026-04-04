@@ -75,8 +75,33 @@ function switchTab(name) {
   if (name === 'orders')   loadOrders()
   if (name === 'messages') loadMessages()
   if (name === 'users')    loadUsers()
-  if (name === 'settings') { loadBuildInfo(); loadCategories(); loadSiteSettings(); loadSiteImages() }
+  if (name === 'settings') {
+    // Load the currently active settings sub-tab's data
+    const active = document.querySelector('#tab-settings [data-stab].active')
+    const stab = active?.dataset.stab || 'general'
+    loadSettingsSubTab(stab)
+  }
   closeSidebar()
+}
+
+// ── Settings sub-tabs ─────────────────────────────────────────────────────────
+function switchSettingsTab(name) {
+  document.querySelectorAll('#tab-settings .settings-sub-pane').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('#tab-settings [data-stab]').forEach(b => b.classList.remove('active'))
+  const pane = document.getElementById(`stab-${name}`)
+  const btn  = document.querySelector(`[data-stab="${name}"]`)
+  if (pane) pane.classList.add('active')
+  if (btn)  btn.classList.add('active')
+  loadSettingsSubTab(name)
+}
+
+function loadSettingsSubTab(name) {
+  if (name === 'general')  loadSiteSettings()
+  if (name === 'images')   loadSiteImages()
+  if (name === 'homepage') loadHomeExamples()
+  if (name === 'shop')     loadCategories()
+  if (name === 'system')   loadBuildInfo()
+  // account tab has no async data to load
 }
 
 function setupTabs() {
@@ -960,6 +985,123 @@ async function removeSiteImage(key) {
     if (!res.ok) throw new Error('Remove failed')
     showToast('Reverted to default', 'success')
     loadSiteImages()
+  } catch (err) {
+    showToast(err.message, 'error')
+  }
+}
+
+// ── Home Examples ─────────────────────────────────────────────────────────────
+async function loadHomeExamples() {
+  const el = document.getElementById('homeExamplesList')
+  if (!el) return
+  try {
+    const examples = await fetch('/api/home-examples').then(r => r.json())
+    if (!examples.length) {
+      el.innerHTML = '<p style="color:#9ca3af;font-size:.85rem">No examples yet. Add one below.</p>'
+      return
+    }
+    el.innerHTML = examples.map(ex => `
+      <div id="exSlot_${ex.id}" style="display:flex;gap:1rem;align-items:flex-start;padding:.75rem;background:#f9fafb;border-radius:10px;margin-bottom:.6rem">
+        <div style="flex-shrink:0;width:80px;height:60px">
+          ${ex.imageUrl
+            ? `<img src="${ex.imageUrl}?t=${Date.now()}" alt="${ex.title}" style="width:80px;height:60px;object-fit:cover;border-radius:6px">`
+            : `<div style="width:80px;height:60px;border-radius:6px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:1.4rem">🖼️</div>`
+          }
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.5rem">
+            <input type="text" value="${ex.title.replace(/"/g, '&quot;')}" id="exTitle_${ex.id}" class="admin-input-field" style="font-size:.9rem;padding:.3rem .6rem;flex:1" placeholder="Title">
+            <button class="btn-secondary-admin" style="font-size:.75rem;padding:.3rem .6rem;white-space:nowrap" onclick="saveExampleTitle('${ex.id}')">Save</button>
+          </div>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+            <label class="btn-primary-admin" style="cursor:pointer;font-size:.75rem;padding:.25rem .6rem">
+              Upload Image
+              <input type="file" accept="image/*" style="display:none" onchange="uploadHomeExampleImage('${ex.id}', this)">
+            </label>
+            ${ex.imageUrl ? `<button class="btn-secondary-admin" style="font-size:.75rem;padding:.25rem .6rem" onclick="removeHomeExampleImage('${ex.id}')">Remove Image</button>` : ''}
+            <button class="btn-delete-admin" style="font-size:.75rem;padding:.25rem .6rem" onclick="deleteHomeExample('${ex.id}','${ex.title.replace(/'/g, "&#39;")}')">Delete</button>
+          </div>
+        </div>
+      </div>`).join('')
+  } catch { /* no-op */ }
+}
+
+async function addHomeExample() {
+  const input = document.getElementById('newExampleTitle')
+  const alert = document.getElementById('exampleAlert')
+  const title = input?.value.trim()
+  if (!title) return
+
+  try {
+    const res  = await fetch('/api/home-examples', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ title })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Failed to add')
+    input.value = ''
+    alert.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.6rem 1rem;font-size:.85rem'
+    alert.textContent   = `✓ "${title}" added`
+    await loadHomeExamples()
+  } catch (err) {
+    alert.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.6rem 1rem;font-size:.85rem'
+    alert.textContent   = '✗ ' + err.message
+  }
+}
+
+async function saveExampleTitle(id) {
+  const input = document.getElementById(`exTitle_${id}`)
+  const title = input?.value.trim()
+  if (!title) return
+  try {
+    const res = await fetch(`/api/home-examples/${id}`, {
+      method:  'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ title })
+    })
+    if (!res.ok) throw new Error('Save failed')
+    showToast('Title updated', 'success')
+  } catch (err) {
+    showToast(err.message, 'error')
+  }
+}
+
+async function uploadHomeExampleImage(id, input) {
+  const file = input.files[0]
+  if (!file) return
+  const fd = new FormData()
+  fd.append('image', file)
+  try {
+    const res  = await fetch(`/api/home-examples/${id}/image`, { method: 'POST', body: fd })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Upload failed')
+    showToast('Image updated!', 'success')
+    loadHomeExamples()
+  } catch (err) {
+    showToast(err.message, 'error')
+  }
+}
+
+async function removeHomeExampleImage(id) {
+  if (!confirm('Remove this image?')) return
+  try {
+    const res = await fetch(`/api/home-examples/${id}/image`, { method: 'DELETE' })
+    if (!res.ok) throw new Error('Remove failed')
+    showToast('Image removed', 'success')
+    loadHomeExamples()
+  } catch (err) {
+    showToast(err.message, 'error')
+  }
+}
+
+async function deleteHomeExample(id, title) {
+  if (!confirm(`Delete example "${title}"? This cannot be undone.`)) return
+  try {
+    const res = await fetch(`/api/home-examples/${id}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error('Delete failed')
+    showToast('Example deleted', 'success')
+    loadHomeExamples()
   } catch (err) {
     showToast(err.message, 'error')
   }

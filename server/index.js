@@ -149,12 +149,13 @@ app.get('/api/stats', require('./middleware/auth').requireAuth, (req, res) => {
 })
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/auth',         require('./routes/auth'))
-app.use('/api/products',     require('./routes/products'))
-app.use('/api/orders',       require('./routes/orders'))
-app.use('/api/contact',      require('./routes/contact'))
-app.use('/api/admin/users',  require('./routes/users'))
-app.use('/api/settings',     require('./routes/settings'))
+app.use('/api/auth',          require('./routes/auth'))
+app.use('/api/products',      require('./routes/products'))
+app.use('/api/orders',        require('./routes/orders'))
+app.use('/api/contact',       require('./routes/contact'))
+app.use('/api/admin/users',   require('./routes/users'))
+app.use('/api/settings',      require('./routes/settings'))
+app.use('/api/home-examples', require('./routes/examples'))
 
 // ─── Page routes ──────────────────────────────────────────────────────────────
 const pub = (file) => path.join(__dirname, '../public', file)

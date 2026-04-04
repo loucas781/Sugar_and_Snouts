@@ -8,6 +8,11 @@ const router = express.Router()
 
 // POST /api/orders — submit order inquiry (public)
 router.post('/', (req, res) => {
+  const shopPref = db.prepare("SELECT value FROM app_preferences WHERE key = 'shop_open'").get()
+  if (shopPref?.value === '0') {
+    return res.status(503).json({ error: 'The shop is not currently accepting orders. Please check back soon.' })
+  }
+
   const { customerName, customerEmail, customerPhone, items, notes } = req.body
   if (!customerName || !customerEmail || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Name, email and at least one item are required' })

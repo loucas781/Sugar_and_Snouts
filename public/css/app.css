@@ -860,6 +860,10 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
 .admin-tab-pane { display: none; }
 .admin-tab-pane.active { display: block; }
 
+/* Settings sub-tabs */
+.settings-sub-pane { display: none; }
+.settings-sub-pane.active { display: block; }
+
 /* ── Announcement banner ────────────────────────────────────────────────────── */
 .sns-announcement {
   background: var(--dark);

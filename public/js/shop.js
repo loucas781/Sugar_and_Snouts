@@ -50,6 +50,29 @@ function getCategoryEmoji(cat) {
   return map[cat] || '🍰'
 }
 
+const CATEGORY_EMOJI = { cookies: '🍪', cupcakes: '🧁', woof_treats: '🐾', pur_treats: '🐱' }
+
+async function loadCategoryFilters() {
+  try {
+    const categories = await fetch('/api/products/categories').then(r => r.json())
+    const container  = document.getElementById('categoryFilter')
+    if (!container) return
+
+    // Rebuild: keep "All" first, then add each category
+    container.innerHTML = '<button class="category-btn active" data-cat="">All</button>'
+    categories.forEach(cat => {
+      const emoji  = CATEGORY_EMOJI[cat.id] ? `${CATEGORY_EMOJI[cat.id]} ` : ''
+      const btn    = document.createElement('button')
+      btn.className    = 'category-btn'
+      btn.dataset.cat  = cat.id
+      btn.textContent  = `${emoji}${cat.name}`
+      container.appendChild(btn)
+    })
+
+    attachCategoryListeners()
+  } catch { /* no-op */ }
+}
+
 function renderProducts() {
   const grid    = document.getElementById('shopGrid')
   const spinner = document.getElementById('shopSpinner')
@@ -100,7 +123,7 @@ async function loadProducts() {
   }
 }
 
-function initFilters() {
+function attachCategoryListeners() {
   document.querySelectorAll('#categoryFilter .category-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#categoryFilter .category-btn').forEach(b => b.classList.remove('active'))
@@ -109,7 +132,9 @@ function initFilters() {
       renderProducts()
     })
   })
+}
 
+function initTagFilters() {
   document.querySelectorAll('#tagFilter .category-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const tag = btn.dataset.tag
@@ -126,7 +151,8 @@ function initFilters() {
   })
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadCategoryFilters()
   loadProducts()
-  initFilters()
+  initTagFilters()
 })

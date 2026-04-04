@@ -18,10 +18,10 @@ if (!fs.existsSync(siteImagesDir)) fs.mkdirSync(siteImagesDir, { recursive: true
 // Valid image slot keys and their display labels
 const SITE_IMAGE_KEYS = {
   hero_bg:          'Hero Background',
-  example_cookies:  'Example – Cookies',
-  example_cupcakes: 'Example – Cupcakes',
-  example_woof:     'Example – Woof Treats',
-  example_pur:      'Example – Pur Treats',
+  home_carousel_1:  'Home – Carousel Image 1',
+  home_carousel_2:  'Home – Carousel Image 2',
+  home_assistants:  'Home – The Assistants',
+  home_guarantee:   'Home – The Homebake Guarantee',
 }
 
 // Multer — uses req.params.key as the base filename so each slot has a unique file

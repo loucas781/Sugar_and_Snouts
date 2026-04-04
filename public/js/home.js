@@ -75,12 +75,12 @@ async function applySiteImages() {
       if (subEl) subEl.textContent = s.hero_tagline
     }
 
-    // Example images
+    // Home page images
     const imageMap = {
-      img_example_cookies:  'imgExampleCookies',
-      img_example_cupcakes: 'imgExampleCupcakes',
-      img_example_woof:     'imgExampleWoof',
-      img_example_pur:      'imgExamplePur',
+      img_home_carousel_1: 'imgHomeCarousel1',
+      img_home_carousel_2: 'imgHomeCarousel2',
+      img_home_assistants: 'imgHomeAssistants',
+      img_home_guarantee:  'imgHomeGuarantee',
     }
     Object.entries(imageMap).forEach(([settingKey, elId]) => {
       if (s[settingKey]) {
@@ -92,8 +92,34 @@ async function applySiteImages() {
   } catch { /* no-op */ }
 }
 
+// Default fallback images for the seeded example IDs
+const EXAMPLE_DEFAULTS = {
+  cookies:  '/img/IMG_9755 2.jpg',
+  cupcakes: '/img/IMG_7539.JPG',
+  woof:     '/img/IMG_9744.jpg',
+  pur:      '/img/coffee-bg.jpg',
+}
+
+async function loadHomeExamples() {
+  try {
+    const examples = await fetch('/api/home-examples').then(r => r.json())
+    const grid = document.getElementById('examplesGrid')
+    if (!grid) return
+    if (!examples.length) return
+    grid.innerHTML = examples.map(ex => {
+      const src = ex.imageUrl || EXAMPLE_DEFAULTS[ex.id] || '/img/IMG_9755 2.jpg'
+      return `
+        <div class="col-md-6 col-lg-3 col-sm-6">
+          <img src="${src}" class="img-fluid img-protected mx-auto d-block mb-4" alt="${ex.title}" width="267" height="190" style="object-fit:cover">
+          <h3 class="tc-7376 float-lg-none text-center mg-sm">${ex.title}</h3>
+        </div>`
+    }).join('')
+  } catch { /* no-op */ }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   applySiteImages()
+  loadHomeExamples()
   loadSection('/api/products?featured=1&limit=4',     'featuredGrid',     'featured-section')
   loadSection('/api/products?new=1&limit=4',           'newGrid',          'new-section')
   loadSection('/api/products?recommended=1&limit=4',   'recommendedGrid',  'recommended-section')

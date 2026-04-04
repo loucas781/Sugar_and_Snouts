@@ -196,7 +196,7 @@ function initOrderModal() {
 
   const btn = document.getElementById('cartCheckout')
   btn?.addEventListener('click', () => {
-    if (!Cart.count()) return
+    if (btn.disabled || !Cart.count()) return
     overlay.classList.add('open')
     renderOrderSummary()
   })
@@ -262,15 +262,24 @@ async function initAdminLink() {
   } catch { /* not authenticated or no nav — no-op */ }
 }
 
-// ── Announcement banner (shared across all public pages) ─────────────────────
+// ── Site status: announcement banner + shop-closed state ─────────────────────
 async function initAnnouncement() {
   try {
     const s = await fetch('/api/settings').then(r => r.json())
+
     if (s.announcement_active === '1' && s.announcement) {
       const banner = document.createElement('div')
       banner.className = 'sns-announcement'
       banner.textContent = s.announcement
       document.body.insertBefore(banner, document.body.firstChild)
+    }
+
+    if (s.shop_open === '0') {
+      const checkoutBtn = document.getElementById('cartCheckout')
+      if (checkoutBtn) {
+        checkoutBtn.disabled = true
+        checkoutBtn.textContent = '🔒 Shop Currently Closed'
+      }
     }
   } catch { /* no-op */ }
 }
