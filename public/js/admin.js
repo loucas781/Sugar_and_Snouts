@@ -96,13 +96,13 @@ function switchSettingsTab(name) {
 }
 
 function loadSettingsSubTab(name) {
-  if (name === 'general')  loadSiteSettings()
+  if (name === 'general')  { loadSiteSettings(); loadSiteIdentity(); loadMaintenanceSettings() }
   if (name === 'images')   loadSiteImages()
-  if (name === 'homepage') loadHomeExamples()
-  if (name === 'shop')     { loadCategories(); loadOrderSettings() }
-  if (name === 'contact')  loadContactSettings()
+  if (name === 'homepage') { loadHomeExamples(); loadHomepageToggles() }
+  if (name === 'shop')     { loadCategories(); loadOrderSettings(); loadShopContent(); loadDeliverySettings() }
+  if (name === 'contact')  { loadContactSettings(); loadEmailNotifSettings() }
   if (name === 'hours')    loadHoursSettings()
-  if (name === 'seo')      loadSeoSettings()
+  if (name === 'seo')      { loadSeoSettings(); loadAnalyticsSettings() }
   if (name === 'system')   loadBuildInfo()
   // account tab has no async data to load
 }
@@ -359,7 +359,9 @@ function openEditProduct(id) {
   document.getElementById('productModalTitle').textContent = 'Edit Product'
   document.getElementById('productId').value      = id
   document.getElementById('pName').value          = p.name
-  document.getElementById('pDesc').value          = p.description || ''
+  document.getElementById('pDesc').value          = p.description  || ''
+  document.getElementById('pIngredients').value   = p.ingredients  || ''
+  document.getElementById('pAllergenInfo').value  = p.allergenInfo || ''
   document.getElementById('pPrice').value         = p.price
   document.getElementById('pOfferPrice').value    = p.offerPrice || ''
   document.getElementById('pOfferExpires').value  = p.offerExpiresAt ? p.offerExpiresAt.replace('Z','').slice(0,16) : ''
@@ -436,6 +438,8 @@ async function saveProduct() {
     const fd = new FormData()
     fd.append('name',          document.getElementById('pName').value)
     fd.append('description',   document.getElementById('pDesc').value)
+    fd.append('ingredients',   document.getElementById('pIngredients').value)
+    fd.append('allergenInfo',  document.getElementById('pAllergenInfo').value)
     fd.append('categoryId',    categoryId)
     fd.append('price',         document.getElementById('pPrice').value)
     fd.append('offerPrice',    document.getElementById('pOfferPrice').value)
@@ -465,6 +469,8 @@ async function saveProduct() {
         body: JSON.stringify({
           name:          document.getElementById('pName').value,
           description:   document.getElementById('pDesc').value,
+          ingredients:   document.getElementById('pIngredients').value,
+          allergenInfo:  document.getElementById('pAllergenInfo').value,
           categoryId,
           price:         parseFloat(document.getElementById('pPrice').value),
           offerPrice:    document.getElementById('pOfferPrice').value ? parseFloat(document.getElementById('pOfferPrice').value) : null,
@@ -1062,10 +1068,11 @@ async function saveSeoSettings() {
 async function loadOrderSettings() {
   try {
     const s = await fetch('/api/settings').then(r => r.json())
-    const noticeEl = document.getElementById('settingOrderNoticeHours')
-    const maxQtyEl = document.getElementById('settingOrderMaxQty')
-    if (noticeEl) noticeEl.value = s.order_notice_hours || ''
-    if (maxQtyEl) maxQtyEl.value = s.order_max_qty || ''
+    const set = (id, key) => { const el = document.getElementById(id); if (el) el.value = s[key] || '' }
+    set('settingOrderNoticeHours',  'order_notice_hours')
+    set('settingOrderMaxQty',       'order_max_qty')
+    set('settingOrderMaxDaysAhead', 'order_max_days_ahead')
+    set('settingOrderDailyLimit',   'order_daily_limit')
   } catch { /* no-op */ }
 }
 
@@ -1073,8 +1080,10 @@ async function saveOrderSettings() {
   const al = document.getElementById('orderSettingsAlert')
   al.style.display = 'none'
   const body = {
-    order_notice_hours: document.getElementById('settingOrderNoticeHours')?.value || '',
-    order_max_qty:      document.getElementById('settingOrderMaxQty')?.value || '',
+    order_notice_hours:  document.getElementById('settingOrderNoticeHours')?.value  || '',
+    order_max_qty:       document.getElementById('settingOrderMaxQty')?.value       || '',
+    order_max_days_ahead:document.getElementById('settingOrderMaxDaysAhead')?.value || '',
+    order_daily_limit:   document.getElementById('settingOrderDailyLimit')?.value   || '',
   }
   try {
     const res = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -1082,6 +1091,226 @@ async function saveOrderSettings() {
     if (!res.ok) throw new Error(json.error || 'Save failed')
     al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
     al.textContent = '✓ Order settings saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── Site Identity ─────────────────────────────────────────────────────────────
+async function loadSiteIdentity() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const nameEl   = document.getElementById('settingSiteName')
+    const footerEl = document.getElementById('settingFooterText')
+    if (nameEl)   nameEl.value   = s.site_name   || ''
+    if (footerEl) footerEl.value = s.footer_text  || ''
+  } catch { /* no-op */ }
+}
+
+async function saveSiteIdentity() {
+  const al = document.getElementById('siteIdentityAlert')
+  al.style.display = 'none'
+  const body = {
+    site_name:   document.getElementById('settingSiteName')?.value   || '',
+    footer_text: document.getElementById('settingFooterText')?.value || '',
+  }
+  try {
+    const res  = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ Saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── Maintenance Settings ───────────────────────────────────────────────────────
+async function loadMaintenanceSettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const modeEl    = document.getElementById('settingMaintenanceMode')
+    const msgEl     = document.getElementById('settingMaintenanceMessage')
+    if (modeEl) modeEl.checked = s.maintenance_mode === '1'
+    if (msgEl)  msgEl.value    = s.maintenance_message || ''
+  } catch { /* no-op */ }
+}
+
+async function saveMaintenanceSettings() {
+  const al = document.getElementById('maintenanceAlert')
+  al.style.display = 'none'
+  const body = {
+    maintenance_mode:    document.getElementById('settingMaintenanceMode')?.checked ? '1' : '0',
+    maintenance_message: document.getElementById('settingMaintenanceMessage')?.value || '',
+  }
+  try {
+    const res  = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ Saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── Homepage Toggles ───────────────────────────────────────────────────────────
+async function loadHomepageToggles() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const set = (id, key) => { const el = document.getElementById(id); if (el) el.checked = s[key] !== '0' }
+    set('settingShowFeatured',   'show_featured_section')
+    set('settingShowNew',        'show_new_section')
+    set('settingShowExamples',   'show_examples_section')
+    set('settingShowAssistants', 'show_assistants_section')
+    const txtEl = document.getElementById('settingAssistantsText')
+    if (txtEl) txtEl.value = s.assistants_text || ''
+  } catch { /* no-op */ }
+}
+
+async function saveHomepageToggles() {
+  const al = document.getElementById('homepageToggleAlert')
+  al.style.display = 'none'
+  const body = {
+    show_featured_section:   document.getElementById('settingShowFeatured')?.checked   ? '1' : '0',
+    show_new_section:        document.getElementById('settingShowNew')?.checked        ? '1' : '0',
+    show_examples_section:   document.getElementById('settingShowExamples')?.checked   ? '1' : '0',
+    show_assistants_section: document.getElementById('settingShowAssistants')?.checked ? '1' : '0',
+    assistants_text:         document.getElementById('settingAssistantsText')?.value   || '',
+  }
+  try {
+    const res  = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ Saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── Shop Content Settings ─────────────────────────────────────────────────────
+async function loadShopContent() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const set = (id, key) => { const el = document.getElementById(id); if (el) el.value = s[key] || '' }
+    set('settingShopClosedMessage', 'shop_closed_message')
+    set('settingAllergenNotice',    'allergen_notice')
+    set('settingOrderFormIntro',    'order_form_intro')
+    set('settingPaymentMethods',    'payment_methods')
+  } catch { /* no-op */ }
+}
+
+async function saveShopContent() {
+  const al = document.getElementById('shopContentAlert')
+  al.style.display = 'none'
+  const body = {
+    shop_closed_message: document.getElementById('settingShopClosedMessage')?.value || '',
+    allergen_notice:     document.getElementById('settingAllergenNotice')?.value    || '',
+    order_form_intro:    document.getElementById('settingOrderFormIntro')?.value    || '',
+    payment_methods:     document.getElementById('settingPaymentMethods')?.value    || '',
+  }
+  try {
+    const res  = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ Saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── Delivery Settings ─────────────────────────────────────────────────────────
+async function loadDeliverySettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const enabledEl = document.getElementById('settingDeliveryEnabled')
+    const feeEl     = document.getElementById('settingDeliveryFee')
+    const minEl     = document.getElementById('settingMinimumOrderValue')
+    if (enabledEl) enabledEl.checked = s.delivery_enabled === '1'
+    if (feeEl)     feeEl.value       = s.delivery_fee || ''
+    if (minEl)     minEl.value       = s.minimum_order_value || ''
+  } catch { /* no-op */ }
+}
+
+async function saveDeliverySettings() {
+  const al = document.getElementById('deliveryAlert')
+  al.style.display = 'none'
+  const body = {
+    delivery_enabled:     document.getElementById('settingDeliveryEnabled')?.checked  ? '1' : '0',
+    delivery_fee:         document.getElementById('settingDeliveryFee')?.value         || '0',
+    minimum_order_value:  document.getElementById('settingMinimumOrderValue')?.value   || '0',
+  }
+  try {
+    const res  = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ Saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── Email Notification Settings ───────────────────────────────────────────────
+async function loadEmailNotifSettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const emailEl   = document.getElementById('settingOrderNotificationEmail')
+    const fromEl    = document.getElementById('settingEmailFromName')
+    const confirmEl = document.getElementById('settingSendCustomerConfirmation')
+    if (emailEl)   emailEl.value    = s.order_notification_email  || ''
+    if (fromEl)    fromEl.value     = s.email_from_name           || ''
+    if (confirmEl) confirmEl.checked = s.send_customer_confirmation !== '0'
+  } catch { /* no-op */ }
+}
+
+async function saveEmailNotifSettings() {
+  const al = document.getElementById('emailNotifAlert')
+  al.style.display = 'none'
+  const body = {
+    order_notification_email:   document.getElementById('settingOrderNotificationEmail')?.value  || '',
+    email_from_name:            document.getElementById('settingEmailFromName')?.value           || '',
+    send_customer_confirmation: document.getElementById('settingSendCustomerConfirmation')?.checked ? '1' : '0',
+  }
+  try {
+    const res  = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ Saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── Analytics Settings ────────────────────────────────────────────────────────
+async function loadAnalyticsSettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const gaEl = document.getElementById('settingGoogleAnalyticsId')
+    if (gaEl) gaEl.value = s.google_analytics_id || ''
+  } catch { /* no-op */ }
+}
+
+async function saveAnalyticsSettings() {
+  const al = document.getElementById('analyticsAlert')
+  al.style.display = 'none'
+  const body = { google_analytics_id: document.getElementById('settingGoogleAnalyticsId')?.value || '' }
+  try {
+    const res  = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ Saved'
   } catch (err) {
     al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
     al.textContent = '✗ ' + err.message

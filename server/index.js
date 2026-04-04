@@ -82,6 +82,27 @@ app.use('/api/contact', rateLimit({
   message: { error: 'Too many messages — please try again later.' },
 }))
 
+// ─── Maintenance mode ─────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  // Allow admin, API auth, and API health through even in maintenance
+  if (req.path.startsWith('/admin') || req.path.startsWith('/api/auth') || req.path === '/api/health') {
+    return next()
+  }
+  try {
+    const db = require('./db/connection')
+    const pref = db.prepare("SELECT value FROM app_preferences WHERE key = 'maintenance_mode'").get()
+    if (pref?.value === '1') {
+      const msgPref = db.prepare("SELECT value FROM app_preferences WHERE key = 'maintenance_message'").get()
+      const message = msgPref?.value || "We'll be back soon!"
+      if (req.path.startsWith('/api/')) {
+        return res.status(503).json({ error: message })
+      }
+      return res.status(503).send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Maintenance — Sugar &amp; Snouts</title><style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fdf6f0;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:2rem}.box{max-width:480px}.icon{font-size:4rem;margin-bottom:1rem}.title{font-size:1.8rem;font-weight:700;color:#1a1a1a;margin-bottom:.5rem}.msg{color:#6b7280;font-size:1rem;line-height:1.6}</style></head><body><div class="box"><div class="icon">🍰</div><div class="title">Back soon!</div><div class="msg">${message}</div></div></body></html>`)
+    }
+  } catch { /* no-op — if DB not ready, allow through */ }
+  next()
+})
+
 // ─── Static files ─────────────────────────────────────────────────────────────
 // New app pages from public/
 app.use(express.static(path.join(__dirname, '../public'), { index: false }))

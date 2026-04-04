@@ -78,6 +78,8 @@ router.get('/images', requireAuth, (req, res) => {
 // ── PUT /api/settings — update text/toggle settings (admin) ───────────────────
 const ALLOWED_KEYS = [
   'announcement', 'announcement_active', 'shop_open', 'hero_tagline',
+  // General
+  'maintenance_mode', 'maintenance_message', 'site_name', 'footer_text',
   // Contact
   'contact_email', 'contact_phone', 'contact_address',
   // Social
@@ -85,9 +87,17 @@ const ALLOWED_KEYS = [
   // Business hours (one string per day, e.g. "9am – 5pm" or "Closed")
   'hours_mon', 'hours_tue', 'hours_wed', 'hours_thu', 'hours_fri', 'hours_sat', 'hours_sun',
   // SEO
-  'seo_title', 'seo_description',
+  'seo_title', 'seo_description', 'google_analytics_id',
   // Order settings
   'order_notice_hours', 'order_max_qty',
+  'shop_closed_message', 'delivery_enabled', 'delivery_fee', 'minimum_order_value',
+  'allergen_notice', 'payment_methods', 'order_form_intro',
+  'order_max_days_ahead', 'order_daily_limit',
+  // Homepage section visibility
+  'show_featured_section', 'show_new_section', 'show_examples_section',
+  'show_assistants_section', 'assistants_text',
+  // Email / notifications
+  'order_notification_email', 'send_customer_confirmation', 'email_from_name',
 ]
 
 router.put('/', requireAuth, (req, res) => {

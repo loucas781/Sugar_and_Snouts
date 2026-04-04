@@ -89,6 +89,33 @@ async function applySiteImages() {
       }
     })
 
+    // Assistants section text
+    if (s.assistants_text) {
+      const assEl = document.getElementById('assistantsText')
+      if (assEl) assEl.textContent = s.assistants_text
+    }
+
+    // Footer text
+    if (s.footer_text) {
+      const footerEl = document.getElementById('footerCustomText')
+      if (footerEl) {
+        footerEl.textContent = s.footer_text
+        footerEl.style.display = ''
+      }
+    }
+
+    // Google Analytics injection
+    if (s.google_analytics_id && !document.getElementById('ga-script')) {
+      const script = document.createElement('script')
+      script.id  = 'ga-script'
+      script.src = `https://www.googletagmanager.com/gtag/js?id=${s.google_analytics_id}`
+      script.async = true
+      document.head.appendChild(script)
+      const inline = document.createElement('script')
+      inline.textContent = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${s.google_analytics_id}')`
+      document.head.appendChild(inline)
+    }
+
   } catch { /* no-op */ }
 }
 
@@ -119,8 +146,20 @@ async function loadHomeExamples() {
   } catch { /* no-op */ }
 }
 
+async function applyHomepageVisibility() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const hide = (id) => { const el = document.getElementById(id); if (el) el.style.display = 'none' }
+    if (s.show_featured_section   === '0') hide('featured-section')
+    if (s.show_new_section        === '0') hide('new-section')
+    if (s.show_examples_section   === '0') hide('examples-section')
+    if (s.show_assistants_section === '0') hide('assistants-section')
+  } catch { /* no-op */ }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   applySiteImages()
+  applyHomepageVisibility()
   loadHomeExamples()
   loadSection('/api/products?featured=1&limit=4',     'featuredGrid',     'featured-section')
   loadSection('/api/products?new=1&limit=4',           'newGrid',          'new-section')

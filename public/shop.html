@@ -68,6 +68,11 @@
     <button class="category-btn" data-tag="recommended">🍰 Recommended</button>
   </div>
 
+  <!-- Allergen notice banner (shown when allergen_notice setting is set) -->
+  <div id="allergenNoticeBanner" style="display:none;margin-bottom:1.5rem;padding:.75rem 1.25rem;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;font-size:.9rem;color:#92400e">
+    <strong>⚠️ Allergen Notice:</strong> <span id="allergenNoticeText"></span>
+  </div>
+
   <!-- Loading -->
   <div class="sns-spinner" id="shopSpinner"></div>
 
@@ -90,6 +95,40 @@
         <p>Copyright © 2025–<script>document.write(new Date().getFullYear())</script> │ Sugar & Snouts │ All Rights Reserved</p>
         <p id="versionTag" style="font-size:.75rem;opacity:.5"></p>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Product Detail Modal ──────────────────────────────────────────────── -->
+<div class="sns-modal-overlay" id="productDetailOverlay">
+  <div class="sns-modal sns-product-detail-modal">
+    <div class="sns-modal__header">
+      <h3 id="pdName">Product</h3>
+      <button class="cart-close" id="productDetailClose">✕</button>
+    </div>
+    <div class="sns-modal__body">
+      <div class="pd-image-wrap" id="pdImageWrap" style="display:none">
+        <img id="pdImage" src="" alt="" class="pd-image">
+      </div>
+      <div class="pd-category" id="pdCategory"></div>
+      <div class="pd-price" id="pdPrice"></div>
+      <div class="pd-description" id="pdDescription" style="display:none"></div>
+
+      <div class="pd-ingredients" id="pdIngredients" style="display:none">
+        <div class="pd-section-label">Ingredients</div>
+        <div id="pdIngredientsText"></div>
+      </div>
+
+      <div class="pd-allergen" id="pdAllergen" style="display:none">
+        <div class="pd-allergen__header">⚠️ ALLERGEN ADVICE</div>
+        <div id="pdAllergenText"></div>
+      </div>
+
+      <div class="pd-limit" id="pdLimit" style="display:none"></div>
+    </div>
+    <div class="sns-modal__footer">
+      <button class="btn-sns-secondary" id="productDetailCancel">Close</button>
+      <button class="btn-sns-primary" id="productDetailAddBtn">Add to Cart</button>
     </div>
   </div>
 </div>
@@ -119,7 +158,10 @@
       <button class="cart-close" id="orderModalClose">✕</button>
     </div>
     <div class="sns-modal__body">
+      <div id="orderFormIntro" style="display:none;margin-bottom:1rem;padding:.75rem 1rem;background:#f0fdf4;border-radius:8px;font-size:.9rem;color:#166534"></div>
       <div id="orderSummary" style="margin-bottom:1.5rem"></div>
+      <div id="deliveryInfo" style="display:none;margin-bottom:1rem;padding:.75rem 1rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:.9rem;color:#374151"></div>
+      <div id="paymentMethodsInfo" style="display:none;margin-bottom:1rem;padding:.75rem 1rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:.9rem;color:#374151"></div>
       <form id="orderForm">
         <div class="sns-form-group">
           <label class="sns-label">Your Name *</label>

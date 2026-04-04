@@ -52,6 +52,8 @@ function serializeProduct(p) {
     id:            p.id,
     name:          p.name,
     description:   p.description,
+    allergenInfo:  p.allergen_info || null,
+    ingredients:   p.ingredients || null,
     category:      p.category_id || p.category,
     categoryName:  getCategoryName(p.category_id) || p.category,
     price:         p.price,
@@ -114,7 +116,7 @@ router.get('/admin/all', requireAuth, (req, res) => {
 // POST /api/admin/products — create product
 router.post('/admin', requireAuth, upload.single('image'), async (req, res) => {
   const {
-    name, description, categoryId, price, offerPrice, offerExpiresAt,
+    name, description, allergenInfo, ingredients, categoryId, price, offerPrice, offerExpiresAt,
     isAvailable, isFeatured, isRecommended, isNew, quantityLimit, sortOrder
   } = req.body
 
@@ -134,11 +136,14 @@ router.post('/admin', requireAuth, upload.single('image'), async (req, res) => {
   }
 
   db.prepare(`
-    INSERT INTO products (id, name, description, category, category_id, price, offer_price, offer_expires_at,
-      image_path, is_available, is_featured, is_recommended, is_new, quantity_limit, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO products (id, name, description, allergen_info, ingredients, category, category_id, price,
+      offer_price, offer_expires_at, image_path, is_available, is_featured, is_recommended, is_new,
+      quantity_limit, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, name.trim(), description?.trim() || null,
+    allergenInfo?.trim() || null,
+    ingredients?.trim() || null,
     'other', categoryId,
     parseFloat(price),
     offerPrice ? parseFloat(offerPrice) : null,
@@ -162,13 +167,13 @@ router.put('/admin/:id', requireAuth, (req, res) => {
   if (!product) return res.status(404).json({ error: 'Product not found' })
 
   const {
-    name, description, categoryId, price, offerPrice, offerExpiresAt,
+    name, description, allergenInfo, ingredients, categoryId, price, offerPrice, offerExpiresAt,
     isAvailable, isFeatured, isRecommended, isNew, quantityLimit, sortOrder
   } = req.body
 
   db.prepare(`
     UPDATE products SET
-      name = ?, description = ?, category_id = ?, price = ?,
+      name = ?, description = ?, allergen_info = ?, ingredients = ?, category_id = ?, price = ?,
       offer_price = ?, offer_expires_at = ?,
       is_available = ?, is_featured = ?, is_recommended = ?, is_new = ?,
       quantity_limit = ?, sort_order = ?,
@@ -177,6 +182,8 @@ router.put('/admin/:id', requireAuth, (req, res) => {
   `).run(
     name?.trim() || product.name,
     description?.trim() ?? product.description,
+    allergenInfo !== undefined ? (allergenInfo?.trim() || null) : product.allergen_info,
+    ingredients  !== undefined ? (ingredients?.trim()  || null) : product.ingredients,
     categoryId || product.category_id || product.category,
     price !== undefined ? parseFloat(price) : product.price,
     offerPrice !== undefined ? (offerPrice ? parseFloat(offerPrice) : null) : product.offer_price,

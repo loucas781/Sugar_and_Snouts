@@ -883,6 +883,18 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
   z-index: 1001;
 }
 
+/* ── Shop closed banner ─────────────────────────────────────────────────────── */
+.sns-shop-closed-banner {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  text-align: center;
+  padding: 1rem 1.5rem;
+  font-size: .95rem;
+  margin-bottom: 1.5rem;
+}
+
 /* ── Admin grid helpers (subset of Bootstrap grid for admin-only pages) ─────── */
 .admin-body .row { display: flex; flex-wrap: wrap; margin-right: -.5rem; margin-left: -.5rem; }
 .admin-body .col-12, .admin-body [class^="col-"] { padding-right: .5rem; padding-left: .5rem; box-sizing: border-box; width: 100%; }
@@ -996,4 +1008,120 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
   /* Category filter wraps cleanly */
   .category-filter { gap: .4rem; }
   .category-btn { font-size: .82rem; padding: .38rem .9rem; }
+}
+
+/* ── Secondary public button ─────────────────────────────────────────────── */
+.btn-sns-secondary {
+  background: var(--white);
+  color: var(--dark);
+  border: 2px solid #d1d5db;
+  border-radius: 50px;
+  padding: .6rem 1.6rem;
+  font-family: 'Old Standard TT', serif;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background .2s, border-color .2s;
+}
+.btn-sns-secondary:hover { background: #f3f4f6; border-color: #9ca3af; }
+
+/* ── Product card — clickable style & detail hint ────────────────────────── */
+.product-card--clickable { cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.product-card--clickable:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+.pd-detail-hint {
+  font-size: .75rem;
+  color: #9ca3af;
+  margin-bottom: .5rem;
+  font-style: italic;
+}
+
+/* ── Product detail modal ────────────────────────────────────────────────── */
+.sns-product-detail-modal { max-width: 580px; }
+
+.pd-image-wrap { margin-bottom: 1.2rem; }
+.pd-image {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+.pd-category {
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #9ca3af;
+  margin-bottom: .4rem;
+}
+
+.pd-price {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 1rem;
+}
+.pd-price .offer { color: var(--gold-dark); }
+.pd-price .original { font-size: 1rem; color: #9ca3af; text-decoration: line-through; margin-left: .4rem; }
+
+.pd-description {
+  font-size: .95rem;
+  color: #374151;
+  line-height: 1.6;
+  margin-bottom: 1.2rem;
+}
+
+.pd-section-label {
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #6b7280;
+  margin-bottom: .5rem;
+}
+
+.pd-ingredients {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius);
+  padding: .9rem 1rem;
+  margin-bottom: 1rem;
+  font-size: .9rem;
+  color: #374151;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+/* ── Allergen advice block ───────────────────────────────────────────────── */
+.pd-allergen {
+  background: #fff7ed;
+  border: 2px solid #fb923c;
+  border-radius: var(--radius);
+  padding: .9rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.pd-allergen__header {
+  font-size: .85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #c2410c;
+  margin-bottom: .5rem;
+}
+
+#pdAllergenText {
+  font-size: .9rem;
+  color: #7c2d12;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.pd-limit {
+  display: inline-block;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: .8rem;
+  border-radius: 20px;
+  padding: .25rem .8rem;
+  margin-top: .2rem;
 }

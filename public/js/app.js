@@ -196,7 +196,7 @@ function initOrderModal() {
 
   const btn = document.getElementById('cartCheckout')
   btn?.addEventListener('click', () => {
-    if (btn.disabled || !Cart.count()) return
+    if (btn.disabled || !Cart.count() || !_shopOpen) return
     overlay.classList.add('open')
     renderOrderSummary()
   })
@@ -263,6 +263,8 @@ async function initAdminLink() {
 }
 
 // ── Site status: announcement banner + shop-closed state ─────────────────────
+let _shopOpen = true // optimistic default until settings load
+
 async function initAnnouncement() {
   try {
     const s = await fetch('/api/settings').then(r => r.json())
@@ -274,11 +276,22 @@ async function initAnnouncement() {
       document.body.insertBefore(banner, document.body.firstChild)
     }
 
-    if (s.shop_open === '0') {
+    _shopOpen = s.shop_open !== '0'
+
+    if (!_shopOpen) {
       const checkoutBtn = document.getElementById('cartCheckout')
       if (checkoutBtn) {
         checkoutBtn.disabled = true
         checkoutBtn.textContent = '🔒 Shop Currently Closed'
+      }
+
+      // Show a visible closed banner on pages that have the shop grid
+      const shopGrid = document.getElementById('shopGrid')
+      if (shopGrid) {
+        const closed = document.createElement('div')
+        closed.className = 'sns-shop-closed-banner'
+        closed.textContent = 'The shop is currently closed. Orders are not being accepted at this time.'
+        shopGrid.parentElement.insertBefore(closed, shopGrid)
       }
     }
   } catch { /* no-op */ }

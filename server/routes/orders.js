@@ -10,7 +10,18 @@ const router = express.Router()
 router.post('/', (req, res) => {
   const shopPref = db.prepare("SELECT value FROM app_preferences WHERE key = 'shop_open'").get()
   if (shopPref?.value === '0') {
-    return res.status(503).json({ error: 'The shop is not currently accepting orders. Please check back soon.' })
+    const closedMsg = db.prepare("SELECT value FROM app_preferences WHERE key = 'shop_closed_message'").get()
+    return res.status(503).json({ error: closedMsg?.value || 'The shop is not currently accepting orders. Please check back soon.' })
+  }
+
+  // Check daily order limit
+  const dailyLimitPref = db.prepare("SELECT value FROM app_preferences WHERE key = 'order_daily_limit'").get()
+  const dailyLimit = dailyLimitPref?.value ? parseInt(dailyLimitPref.value) : null
+  if (dailyLimit) {
+    const todayCount = db.prepare("SELECT COUNT(*) as c FROM orders WHERE date(created_at) = date('now') AND status != 'cancelled'").get()
+    if (todayCount.c >= dailyLimit) {
+      return res.status(503).json({ error: 'We have reached our maximum orders for today. Please try again tomorrow.' })
+    }
   }
 
   const { customerName, customerEmail, customerPhone, items, notes } = req.body
@@ -49,6 +60,13 @@ router.post('/', (req, res) => {
       unitPrice,
       lineTotal:   unitPrice * qty
     })
+  }
+
+  // Check minimum order value
+  const minOrderPref = db.prepare("SELECT value FROM app_preferences WHERE key = 'minimum_order_value'").get()
+  const minOrderValue = minOrderPref?.value ? parseFloat(minOrderPref.value) : 0
+  if (minOrderValue > 0 && total < minOrderValue) {
+    return res.status(400).json({ error: `Minimum order value is £${minOrderValue.toFixed(2)}. Your order total is £${total.toFixed(2)}.` })
   }
 
   const id = uuidv4()

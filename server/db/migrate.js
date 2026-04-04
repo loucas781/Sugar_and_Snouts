@@ -150,13 +150,21 @@ function migrate() {
   addIfMissing('failed_attempts', 'INTEGER NOT NULL DEFAULT 0')
   addIfMissing('locked_until',    'TEXT')
 
-  // ── Safe column addition: products.category_id ───────────────────────────
+  // ── Safe column additions: products ─────────────────────────────────────
   const productCols = db.prepare("PRAGMA table_info(products)").all().map(c => c.name)
   if (!productCols.includes('category_id')) {
     db.exec('ALTER TABLE products ADD COLUMN category_id TEXT')
     // Backfill: map old category value into category_id
     db.exec("UPDATE products SET category_id = category WHERE category_id IS NULL")
     console.log('  ✓  Added column products.category_id (backfilled from category)')
+  }
+  if (!productCols.includes('allergen_info')) {
+    db.exec('ALTER TABLE products ADD COLUMN allergen_info TEXT')
+    console.log('  ✓  Added column products.allergen_info')
+  }
+  if (!productCols.includes('ingredients')) {
+    db.exec('ALTER TABLE products ADD COLUMN ingredients TEXT')
+    console.log('  ✓  Added column products.ingredients')
   }
 
   // ── Seed default product categories if none exist ────────────────────────
@@ -174,19 +182,43 @@ function migrate() {
     console.log('  ✓  Default product categories seeded')
   }
 
-  // ── Seed default app preferences if none exist ──────────────────────────────
-  const prefCount = db.prepare('SELECT COUNT(*) as c FROM app_preferences').get()
-  if (prefCount.c === 0) {
-    const defaults = [
-      ['shop_open',           '1'],
-      ['announcement',        ''],
-      ['announcement_active', '0'],
-      ['hero_tagline',        'Baked goods for people and pets, joining you together for a sweet treat 🍪 🧁'],
-    ]
-    const insertPref = db.prepare("INSERT OR IGNORE INTO app_preferences (key, value) VALUES (?, ?)")
-    defaults.forEach(([k, v]) => insertPref.run(k, v))
-    console.log('  ✓  Default app preferences seeded')
-  }
+  // ── Seed default app preferences (INSERT OR IGNORE so new keys are backfilled) ─
+  const defaults = [
+    ['shop_open',                 '1'],
+    ['announcement',              ''],
+    ['announcement_active',       '0'],
+    ['hero_tagline',              'Baked goods for people and pets, joining you together for a sweet treat 🍪 🧁'],
+    // General
+    ['maintenance_mode',          '0'],
+    ['maintenance_message',       'We\'ll be back soon!'],
+    ['site_name',                 'Sugar & Snouts'],
+    ['footer_text',               ''],
+    // Shop / Orders
+    ['shop_closed_message',       'The shop is currently closed for new orders.'],
+    ['delivery_enabled',          '0'],
+    ['delivery_fee',              '0'],
+    ['minimum_order_value',       '0'],
+    ['allergen_notice',           ''],
+    ['payment_methods',           ''],
+    ['order_form_intro',          ''],
+    ['order_max_days_ahead',      ''],
+    ['order_daily_limit',         ''],
+    // Homepage section visibility
+    ['show_featured_section',     '1'],
+    ['show_new_section',          '1'],
+    ['show_examples_section',     '1'],
+    ['show_assistants_section',   '1'],
+    ['assistants_text',           ''],
+    // Email / notifications
+    ['order_notification_email',  ''],
+    ['send_customer_confirmation','1'],
+    ['email_from_name',           ''],
+    // SEO
+    ['google_analytics_id',       ''],
+  ]
+  const insertPref = db.prepare("INSERT OR IGNORE INTO app_preferences (key, value) VALUES (?, ?)")
+  defaults.forEach(([k, v]) => insertPref.run(k, v))
+  console.log('  ✓  Default app preferences seeded')
 
   // ── Seed default home examples if none exist ─────────────────────────────────
   const exCount = db.prepare('SELECT COUNT(*) as c FROM home_examples').get()

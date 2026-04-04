@@ -237,6 +237,39 @@
               <button class="btn-primary-admin" onclick="saveSiteSettings()">Save Settings</button>
             </div>
           </div>
+
+          <div class="admin-panel" style="max-width:560px;margin-top:1.5rem">
+            <div class="admin-panel__header"><h2>Site Identity</h2></div>
+            <div class="admin-panel__body">
+              <div id="siteIdentityAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <div class="admin-form-group">
+                <label class="admin-label">Site Name</label>
+                <input type="text" id="settingSiteName" class="admin-input-field" placeholder="Sugar &amp; Snouts">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Footer Text</label>
+                <input type="text" id="settingFooterText" class="admin-input-field" placeholder="Optional custom text shown in the site footer">
+              </div>
+              <button class="btn-primary-admin" onclick="saveSiteIdentity()">Save</button>
+            </div>
+          </div>
+
+          <div class="admin-panel" style="max-width:560px;margin-top:1.5rem">
+            <div class="admin-panel__header"><h2>Maintenance Mode</h2></div>
+            <div class="admin-panel__body">
+              <div id="maintenanceAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <p style="font-size:.85rem;color:#6b7280;margin-bottom:1rem">When enabled, all public pages show a maintenance screen. The admin panel remains accessible.</p>
+              <div class="toggle-row" style="margin-bottom:1rem">
+                <span class="toggle-label" style="font-size:.9rem;font-weight:600">Maintenance Mode Active</span>
+                <label class="toggle-switch"><input type="checkbox" id="settingMaintenanceMode"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Maintenance Message</label>
+                <input type="text" id="settingMaintenanceMessage" class="admin-input-field" placeholder="We'll be back soon!">
+              </div>
+              <button class="btn-primary-admin" onclick="saveMaintenanceSettings()">Save</button>
+            </div>
+          </div>
         </div>
 
         <!-- ── Images ── -->
@@ -252,6 +285,34 @@
 
         <!-- ── Home Page ── -->
         <div class="settings-sub-pane" id="stab-homepage">
+          <div class="admin-panel" style="max-width:560px;margin-bottom:1.5rem">
+            <div class="admin-panel__header"><h2>Section Visibility</h2></div>
+            <div class="admin-panel__body">
+              <div id="homepageToggleAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <p style="font-size:.85rem;color:#6b7280;margin-bottom:1rem">Toggle which sections appear on the home page.</p>
+              <div class="toggle-row">
+                <span class="toggle-label">⭐ Featured Products</span>
+                <label class="toggle-switch"><input type="checkbox" id="settingShowFeatured" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label">✨ New Products</span>
+                <label class="toggle-switch"><input type="checkbox" id="settingShowNew" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label">🖼️ Our Examples</span>
+                <label class="toggle-switch"><input type="checkbox" id="settingShowExamples" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row" style="margin-bottom:1rem">
+                <span class="toggle-label">🐾 The Assistants</span>
+                <label class="toggle-switch"><input type="checkbox" id="settingShowAssistants" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Assistants Section Text</label>
+                <textarea id="settingAssistantsText" class="admin-textarea-field" rows="3" placeholder="Custom text for the assistants section (leave blank to use default)"></textarea>
+              </div>
+              <button class="btn-primary-admin" onclick="saveHomepageToggles()">Save</button>
+            </div>
+          </div>
           <div class="admin-panel" style="max-width:700px">
             <div class="admin-panel__header"><h2>Home Examples</h2></div>
             <div class="admin-panel__body">
@@ -265,6 +326,7 @@
             </div>
           </div>
         </div>
+
 
         <!-- ── Shop ── -->
         <div class="settings-sub-pane" id="stab-shop">
@@ -291,7 +353,61 @@
                 <label class="admin-label">Max Quantity per Order (all items combined)</label>
                 <input type="number" id="settingOrderMaxQty" class="admin-input-field" min="1" step="1" placeholder="Leave blank for no limit">
               </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Max Days in Advance</label>
+                <input type="number" id="settingOrderMaxDaysAhead" class="admin-input-field" min="1" step="1" placeholder="e.g. 14 — Leave blank for no limit">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Daily Order Limit</label>
+                <input type="number" id="settingOrderDailyLimit" class="admin-input-field" min="1" step="1" placeholder="Max orders accepted per day — leave blank for no limit">
+              </div>
               <button class="btn-primary-admin" onclick="saveOrderSettings()">Save Order Settings</button>
+            </div>
+          </div>
+
+          <div class="admin-panel" style="max-width:480px;margin-top:1.5rem">
+            <div class="admin-panel__header"><h2>Shop Content</h2></div>
+            <div class="admin-panel__body">
+              <div id="shopContentAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <div class="admin-form-group">
+                <label class="admin-label">Shop Closed Message</label>
+                <input type="text" id="settingShopClosedMessage" class="admin-input-field" placeholder="The shop is currently closed for new orders.">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Allergen Notice</label>
+                <textarea id="settingAllergenNotice" class="admin-textarea-field" rows="2" placeholder="e.g. All products are made in a kitchen that handles nuts, gluten, eggs and dairy."></textarea>
+                <div style="font-size:.75rem;color:#9ca3af;margin-top:.3rem">Shown as a banner on the shop page when filled in.</div>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Order Form Intro Text</label>
+                <input type="text" id="settingOrderFormIntro" class="admin-input-field" placeholder="Optional message shown at the top of the order form">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Accepted Payment Methods</label>
+                <input type="text" id="settingPaymentMethods" class="admin-input-field" placeholder="e.g. Cash, Bank Transfer, PayPal">
+              </div>
+              <button class="btn-primary-admin" onclick="saveShopContent()">Save</button>
+            </div>
+          </div>
+
+          <div class="admin-panel" style="max-width:480px;margin-top:1.5rem">
+            <div class="admin-panel__header"><h2>Delivery</h2></div>
+            <div class="admin-panel__body">
+              <div id="deliveryAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <p style="font-size:.85rem;color:#6b7280;margin-bottom:1rem">If enabled, the order form will display delivery information. No address is collected — this is informational only.</p>
+              <div class="toggle-row" style="margin-bottom:1rem">
+                <span class="toggle-label">Delivery Available</span>
+                <label class="toggle-switch"><input type="checkbox" id="settingDeliveryEnabled"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Delivery Fee (£)</label>
+                <input type="number" id="settingDeliveryFee" class="admin-input-field" min="0" step="0.01" placeholder="0.00 for free delivery">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Minimum Order Value (£)</label>
+                <input type="number" id="settingMinimumOrderValue" class="admin-input-field" min="0" step="0.01" placeholder="Leave 0 for no minimum">
+              </div>
+              <button class="btn-primary-admin" onclick="saveDeliverySettings()">Save</button>
             </div>
           </div>
         </div>
@@ -334,6 +450,26 @@
                 <input type="url" id="settingSocialTiktok" class="admin-input-field" placeholder="https://tiktok.com/@yourbakery">
               </div>
               <button class="btn-primary-admin" onclick="saveSocialSettings()">Save Social Links</button>
+            </div>
+          </div>
+          <div class="admin-panel" style="max-width:560px;margin-top:1.5rem">
+            <div class="admin-panel__header"><h2>Email Notifications</h2></div>
+            <div class="admin-panel__body">
+              <div id="emailNotifAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <div class="admin-form-group">
+                <label class="admin-label">Order Notification Email</label>
+                <input type="email" id="settingOrderNotificationEmail" class="admin-input-field" placeholder="Defaults to contact email if blank">
+                <div style="font-size:.75rem;color:#9ca3af;margin-top:.3rem">Where new order alerts are sent.</div>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Email From Name</label>
+                <input type="text" id="settingEmailFromName" class="admin-input-field" placeholder="e.g. Sugar &amp; Snouts">
+              </div>
+              <div class="toggle-row" style="margin-bottom:1.2rem">
+                <span class="toggle-label">Send confirmation email to customers</span>
+                <label class="toggle-switch"><input type="checkbox" id="settingSendCustomerConfirmation" checked><span class="toggle-slider"></span></label>
+              </div>
+              <button class="btn-primary-admin" onclick="saveEmailNotifSettings()">Save</button>
             </div>
           </div>
         </div>
@@ -383,6 +519,18 @@
                 <div style="font-size:.75rem;color:#9ca3af;margin-top:.3rem">Shown below your link in search results. Keep under 155 characters.</div>
               </div>
               <button class="btn-primary-admin" onclick="saveSeoSettings()">Save SEO Settings</button>
+            </div>
+          </div>
+          <div class="admin-panel" style="max-width:600px;margin-top:1.5rem">
+            <div class="admin-panel__header"><h2>Analytics</h2></div>
+            <div class="admin-panel__body">
+              <div id="analyticsAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <div class="admin-form-group">
+                <label class="admin-label">Google Analytics Measurement ID</label>
+                <input type="text" id="settingGoogleAnalyticsId" class="admin-input-field" placeholder="G-XXXXXXXXXX">
+                <div style="font-size:.75rem;color:#9ca3af;margin-top:.3rem">Leave blank to disable tracking. The GA4 script is injected automatically on all public pages.</div>
+              </div>
+              <button class="btn-primary-admin" onclick="saveAnalyticsSettings()">Save</button>
             </div>
           </div>
         </div>
@@ -467,8 +615,21 @@
           </div>
           <div class="col-12">
             <div class="admin-form-group">
-              <label class="admin-label">Description</label>
-              <textarea name="description" id="pDesc" class="admin-textarea-field" placeholder="Tell customers what makes this special…" maxlength="500"></textarea>
+              <label class="admin-label">Short Description</label>
+              <textarea name="description" id="pDesc" class="admin-textarea-field" placeholder="Brief description shown on the product card…" maxlength="500"></textarea>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="admin-form-group">
+              <label class="admin-label">Ingredients / Full Description</label>
+              <textarea name="ingredients" id="pIngredients" class="admin-textarea-field" rows="3" placeholder="Full ingredients list or detailed product description shown when a customer opens the product…"></textarea>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="admin-form-group">
+              <label class="admin-label">⚠️ Allergen Information</label>
+              <textarea name="allergenInfo" id="pAllergenInfo" class="admin-textarea-field" rows="2" placeholder="e.g. Contains: wheat (gluten), eggs, dairy, soya. May contain traces of nuts."></textarea>
+              <div style="font-size:.75rem;color:#9ca3af;margin-top:.3rem">Shown as a highlighted warning block in the product detail view.</div>
             </div>
           </div>
           <div class="col-sm-6">
