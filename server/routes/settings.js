@@ -4,7 +4,7 @@ const path    = require('path')
 const fs      = require('fs')
 const multer  = require('multer')
 const db      = require('../db/connection')
-const { requireAuth } = require('../middleware/auth')
+const { requireAuth, optionalAuth } = require('../middleware/auth')
 const { compressImage } = require('../utils/compressImage')
 
 const router = express.Router()
@@ -50,11 +50,17 @@ function currentImageUrl(key) {
   } catch { return null }
 }
 
+// Keys that must not be exposed to unauthenticated callers
+const PRIVATE_KEYS = new Set(['smtp_pass', 'smtp_user'])
+
 // ── GET /api/settings — public settings + site image URLs ─────────────────────
-router.get('/', (req, res) => {
+router.get('/', optionalAuth, (req, res) => {
+  const isAdmin = !!req.user
   const rows = db.prepare('SELECT key, value FROM app_preferences').all()
   const settings = {}
-  rows.forEach(r => { settings[r.key] = r.value })
+  rows.forEach(r => {
+    if (isAdmin || !PRIVATE_KEYS.has(r.key)) settings[r.key] = r.value
+  })
 
   // Attach current site image URLs
   Object.keys(SITE_IMAGE_KEYS).forEach(key => {
@@ -98,6 +104,8 @@ const ALLOWED_KEYS = [
   'show_assistants_section', 'assistants_text',
   // Email / notifications
   'order_notification_email', 'send_customer_confirmation', 'email_from_name',
+  // SMTP configuration
+  'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from',
 ]
 
 router.put('/', requireAuth, (req, res) => {

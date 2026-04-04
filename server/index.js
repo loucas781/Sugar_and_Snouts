@@ -84,7 +84,7 @@ app.use('/api/contact', rateLimit({
 
 // ─── Maintenance mode ─────────────────────────────────────────────────────────
 app.use((req, res, next) => {
-  // Allow admin, API auth, and API health through even in maintenance
+  // Allow admin pages, API auth, and health check through unconditionally
   if (req.path.startsWith('/admin') || req.path.startsWith('/api/auth') || req.path === '/api/health') {
     return next()
   }
@@ -92,6 +92,21 @@ app.use((req, res, next) => {
     const db = require('./db/connection')
     const pref = db.prepare("SELECT value FROM app_preferences WHERE key = 'maintenance_mode'").get()
     if (pref?.value === '1') {
+      // Allow authenticated admins through so the dashboard keeps working
+      const token = req.cookies?.token
+      if (token) {
+        try {
+          const jwt = require('jsonwebtoken')
+          const payload = jwt.verify(token, process.env.JWT_SECRET)
+          const user = db.prepare(
+            'SELECT id, is_active, token_version FROM admin_users WHERE id = ?'
+          ).get(payload.id)
+          if (user && user.is_active && (user.token_version || 0) === (payload.tv || 0)) {
+            return next()
+          }
+        } catch { /* invalid token — fall through to maintenance */ }
+      }
+
       const msgPref = db.prepare("SELECT value FROM app_preferences WHERE key = 'maintenance_message'").get()
       const message = msgPref?.value || "We'll be back soon!"
       if (req.path.startsWith('/api/')) {

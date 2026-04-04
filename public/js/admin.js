@@ -6,6 +6,7 @@ let _editingOrderId   = null
 let _editingUserId    = null
 let _openMsgId        = null
 let _newImageFile     = null
+let _cropper          = null
 let _productFilter    = ''
 let _allProducts      = []
 let _categories       = []
@@ -56,7 +57,40 @@ async function initAdmin() {
     setupTabs()
     loadCategories().then(setupProductFilters)
     setupSidebar()
+    startPolling()
   } catch { window.location.href = '/admin/' }
+}
+
+// ── Live polling ──────────────────────────────────────────────────────────────
+let _pollTimer = null
+
+function startPolling() {
+  if (_pollTimer) return
+  _pollTimer = setInterval(pollForUpdates, 30000)
+}
+
+async function pollForUpdates() {
+  try {
+    const cfg = await fetch('/api/config').then(r => r.json())
+    if (!cfg.user) return // session ended
+
+    const unreadBadge  = document.getElementById('unreadBadge')
+    const pendingBadge = document.getElementById('pendingBadge')
+    if (unreadBadge) {
+      unreadBadge.textContent  = cfg.unreadMessages
+      unreadBadge.style.display = cfg.unreadMessages > 0 ? '' : 'none'
+    }
+    if (pendingBadge) {
+      pendingBadge.textContent  = cfg.pendingOrders
+      pendingBadge.style.display = cfg.pendingOrders > 0 ? '' : 'none'
+    }
+
+    // Refresh whichever tab is currently open
+    const activeTab = document.querySelector('.admin-nav-item.active')?.dataset.tab
+    if (activeTab === 'messages') loadMessages()
+    if (activeTab === 'orders')   loadOrders()
+    if (activeTab === 'overview') loadStats()
+  } catch { /* no-op */ }
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -100,7 +134,7 @@ function loadSettingsSubTab(name) {
   if (name === 'images')   loadSiteImages()
   if (name === 'homepage') { loadHomeExamples(); loadHomepageToggles() }
   if (name === 'shop')     { loadCategories(); loadOrderSettings(); loadShopContent(); loadDeliverySettings() }
-  if (name === 'contact')  { loadContactSettings(); loadEmailNotifSettings() }
+  if (name === 'contact')  { loadContactSettings(); loadEmailNotifSettings(); loadSmtpSettings() }
   if (name === 'hours')    loadHoursSettings()
   if (name === 'seo')      { loadSeoSettings(); loadAnalyticsSettings() }
   if (name === 'system')   loadBuildInfo()
@@ -394,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('imageInput')
   input?.addEventListener('change', (e) => {
     const file = e.target.files[0]
-    if (file) previewImage(file)
+    if (file) openCropModal(file)
   })
 
   const area = document.getElementById('imgUploadArea')
@@ -404,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault()
     area.classList.remove('dragover')
     const file = e.dataTransfer.files[0]
-    if (file && file.type.startsWith('image/')) previewImage(file)
+    if (file && file.type.startsWith('image/')) openCropModal(file)
   })
 })
 
@@ -424,6 +458,45 @@ function clearImage() {
   document.getElementById('imgPlaceholder').style.display   = ''
   document.getElementById('imgPreviewWrap').style.display   = 'none'
   document.getElementById('imgPreview').src = ''
+  document.getElementById('imageInput').value = ''
+}
+
+function openCropModal(file) {
+  const url = URL.createObjectURL(file)
+  const img  = document.getElementById('cropperImg')
+  img.src = url
+  document.getElementById('cropModalOverlay').style.display = 'flex'
+  if (_cropper) { _cropper.destroy(); _cropper = null }
+  img.onload = () => {
+    _cropper = new Cropper(img, {
+      aspectRatio:      4 / 3,
+      viewMode:         1,
+      autoCropArea:     0.9,
+      responsive:       true,
+      checkOrientation: false,  // sharp handles EXIF rotation server-side
+    })
+  }
+}
+
+function applyCrop() {
+  if (!_cropper) return
+  _cropper.getCroppedCanvas({ maxWidth: 1920, maxHeight: 1440 }).toBlob(blob => {
+    if (!blob) return
+    _newImageFile = new File([blob], 'cropped.jpg', { type: 'image/jpeg' })
+    const reader = new FileReader()
+    reader.onload = e => {
+      document.getElementById('imgPreview').src = e.target.result
+      document.getElementById('imgPlaceholder').style.display = 'none'
+      document.getElementById('imgPreviewWrap').style.display = 'block'
+    }
+    reader.readAsDataURL(blob)
+    closeCropModal()
+  }, 'image/jpeg', 0.92)
+}
+
+function closeCropModal() {
+  document.getElementById('cropModalOverlay').style.display = 'none'
+  if (_cropper) { _cropper.destroy(); _cropper = null }
   document.getElementById('imageInput').value = ''
 }
 
@@ -639,7 +712,7 @@ async function loadMessages() {
 
     list.style.display = ''
     list.innerHTML = msgs.map(m => `
-      <div class="admin-panel" style="margin-bottom:.8rem;cursor:pointer" onclick="openMsg('${m.id}','${m.name.replace(/'/g,"&#39;")}','${m.email}',\`${m.message.replace(/`/g,'\\`')}\`)">
+      <div class="admin-panel" style="margin-bottom:.8rem;cursor:pointer" onclick="openMsg('${m.id}','${m.name.replace(/'/g,"&#39;")}','${m.email}',\`${m.message.replace(/`/g,'\\`')}\`,${m.is_read ? 'true' : 'false'})">
         <div class="admin-panel__body" style="padding:.9rem 1.2rem">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div>
@@ -658,9 +731,12 @@ async function loadMessages() {
   }
 }
 
-async function openMsg(id, name, email, message) {
+async function openMsg(id, name, email, message, isRead) {
   _openMsgId = id
-  await fetch(`/api/contact/admin/${id}/read`, { method: 'PATCH' }).catch(() => {})
+  const wasUnread = !isRead
+  if (wasUnread) {
+    await fetch(`/api/contact/admin/${id}/read`, { method: 'PATCH' }).catch(() => {})
+  }
 
   document.getElementById('msgModalBody').innerHTML = `
     <div style="display:grid;grid-template-columns:auto 1fr;gap:.5rem 1rem;margin-bottom:1rem;font-size:.9rem">
@@ -670,12 +746,14 @@ async function openMsg(id, name, email, message) {
     <div style="background:#f9fafb;border-radius:8px;padding:1rem;font-size:.9rem;line-height:1.7;white-space:pre-wrap">${message}</div>`
   document.getElementById('msgModalOverlay').classList.add('open')
 
-  loadMessages()
-  const badge = document.getElementById('unreadBadge')
-  if (badge) {
-    const n = Math.max(0, parseInt(badge.textContent) - 1)
-    badge.textContent = n
-    badge.style.display = n > 0 ? '' : 'none'
+  if (wasUnread) {
+    loadMessages()
+    const badge = document.getElementById('unreadBadge')
+    if (badge) {
+      const n = Math.max(0, parseInt(badge.textContent) - 1)
+      badge.textContent = n
+      badge.style.display = n > 0 ? '' : 'none'
+    }
   }
 }
 
@@ -1286,6 +1364,59 @@ async function saveEmailNotifSettings() {
     if (!res.ok) throw new Error(json.error || 'Save failed')
     al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
     al.textContent = '✓ Saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── SMTP Settings ─────────────────────────────────────────────────────────────
+async function loadSmtpSettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || '' }
+    set('settingSmtpHost', s.smtp_host)
+    set('settingSmtpPort', s.smtp_port)
+    set('settingSmtpUser', s.smtp_user)
+    set('settingSmtpFrom', s.smtp_from)
+    // Never pre-fill the password field; leave blank so saving blank = keep existing
+  } catch { /* no-op */ }
+}
+
+async function saveSmtpSettings() {
+  const al = document.getElementById('smtpAlert')
+  al.style.display = 'none'
+  const body = {
+    smtp_host: document.getElementById('settingSmtpHost')?.value.trim() || '',
+    smtp_port: document.getElementById('settingSmtpPort')?.value.trim() || '',
+    smtp_user: document.getElementById('settingSmtpUser')?.value.trim() || '',
+    smtp_from: document.getElementById('settingSmtpFrom')?.value.trim() || '',
+  }
+  const pass = document.getElementById('settingSmtpPass')?.value
+  if (pass) body.smtp_pass = pass
+  try {
+    const res  = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    if (pass) document.getElementById('settingSmtpPass').value = ''
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ SMTP settings saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+async function testSmtp() {
+  const al = document.getElementById('smtpAlert')
+  al.style.cssText = 'display:block;background:#fef3c7;color:#92400e;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+  al.textContent = 'Sending test email…'
+  try {
+    const res  = await fetch('/api/contact/admin/smtp-test', { method: 'POST' })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Test failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ ' + (json.message || 'Test email sent successfully')
   } catch (err) {
     al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
     al.textContent = '✗ ' + err.message

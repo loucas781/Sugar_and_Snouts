@@ -15,7 +15,9 @@
     .contact-hero { background: linear-gradient(135deg, var(--blue) 0%, var(--pink) 100%); padding: 3.5rem 0 2.5rem; text-align: center; }
     .contact-hero h1 { font-family: 'Pacifico', cursive; font-size: clamp(2rem, 5vw, 3rem); color: var(--dark); }
     .contact-hero p  { color: rgba(35,35,35,.7); font-size: 1.05rem; }
-    .contact-card { background: white; border-radius: 20px; box-shadow: var(--shadow-md); padding: 2.5rem; max-width: 600px; margin: 0 auto; }
+    .contact-card { background: white; border-radius: 20px; box-shadow: var(--shadow-md); padding: 2.5rem; }
+    #contactLayout { display: grid; grid-template-columns: minmax(0,600px); gap: 2rem; max-width: 1100px; margin: 0 auto; justify-content: center; }
+    @media (max-width: 767px) { #contactLayout { grid-template-columns: 1fr !important; } }
   </style>
 </head>
 <body>
@@ -47,7 +49,10 @@
 </div>
 
 <div class="container py-5">
-  <div class="contact-card">
+  <div id="contactLayout">
+
+  <!-- Contact form (left / full-width when info panel hidden) -->
+  <div class="contact-card" id="contactFormWrap">
     <div id="contactAlert" style="display:none"></div>
 
     <form id="contactForm">
@@ -72,11 +77,31 @@
       <button type="submit" class="btn-sns-primary w-100" id="contactSubmit">Send Message</button>
     </form>
 
-    <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #eee;text-align:center">
-      <p style="font-size:.9rem;color:var(--text-muted);margin-bottom:.5rem">You can also find us on Instagram</p>
-      <a href="https://www.instagram.com/sugar_and_snouts" target="_blank" style="font-size:.95rem">@sugar_and_snouts</a>
+  </div><!-- end contact-card -->
+
+  <!-- Business info panel (right — only shown when settings data exists) -->
+  <div id="businessInfoPanel" style="display:none">
+    <div style="background:white;border-radius:20px;box-shadow:var(--shadow-md);padding:2rem;height:fit-content">
+      <h2 style="font-family:'Pacifico',cursive;font-size:1.4rem;color:var(--dark);margin-bottom:1.2rem">Find Us</h2>
+
+      <div id="bizContactBlock" style="display:none;margin-bottom:1.4rem">
+        <h3 style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:.6rem">Contact</h3>
+        <div id="bizContactDetails"></div>
+      </div>
+
+      <div id="bizHoursBlock" style="display:none;margin-bottom:1.4rem">
+        <h3 style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:.6rem">Opening Hours</h3>
+        <div id="bizHours" style="display:grid;grid-template-columns:80px 1fr;gap:.3rem .8rem;font-size:.9rem"></div>
+      </div>
+
+      <div id="bizSocialBlock" style="display:none">
+        <h3 style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:.6rem">Social</h3>
+        <div id="bizSocial" style="display:flex;flex-direction:column;gap:.4rem;font-size:.9rem"></div>
+      </div>
     </div>
   </div>
+
+  </div><!-- end grid -->
 </div>
 
 <div class="bloc bgc-7376 d-bloc">
@@ -99,6 +124,55 @@
 <script src="/js/bootstrap.bundle.min.js"></script>
 <script src="/js/app.js"></script>
 <script>
+// ── Load business info from settings ──────────────────────────────────────────
+;(async () => {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const panel = document.getElementById('businessInfoPanel')
+    let hasAny = false
+
+    // Contact details
+    const contactLines = []
+    if (s.contact_address) contactLines.push(`<div style="margin-bottom:.3rem">📍 ${s.contact_address}</div>`)
+    if (s.contact_phone)   contactLines.push(`<div style="margin-bottom:.3rem">📞 <a href="tel:${s.contact_phone}" style="color:inherit">${s.contact_phone}</a></div>`)
+    if (s.contact_email)   contactLines.push(`<div>✉️ <a href="mailto:${s.contact_email}" style="color:inherit">${s.contact_email}</a></div>`)
+    if (contactLines.length) {
+      document.getElementById('bizContactDetails').innerHTML = contactLines.join('')
+      document.getElementById('bizContactBlock').style.display = ''
+      hasAny = true
+    }
+
+    // Hours
+    const days = [
+      ['Monday', s.hours_mon], ['Tuesday', s.hours_tue], ['Wednesday', s.hours_wed],
+      ['Thursday', s.hours_thu], ['Friday', s.hours_fri], ['Saturday', s.hours_sat], ['Sunday', s.hours_sun]
+    ].filter(([, v]) => v)
+    if (days.length) {
+      document.getElementById('bizHours').innerHTML = days.map(([d, v]) =>
+        `<span style="color:#6b7280">${d}</span><span>${v}</span>`
+      ).join('')
+      document.getElementById('bizHoursBlock').style.display = ''
+      hasAny = true
+    }
+
+    // Social
+    const socialLinks = []
+    if (s.social_facebook)  socialLinks.push(`<a href="${s.social_facebook}"  target="_blank" rel="noopener" style="color:var(--dark)">📘 Facebook</a>`)
+    if (s.social_instagram) socialLinks.push(`<a href="${s.social_instagram}" target="_blank" rel="noopener" style="color:var(--dark)">📸 Instagram</a>`)
+    if (s.social_tiktok)    socialLinks.push(`<a href="${s.social_tiktok}"    target="_blank" rel="noopener" style="color:var(--dark)">🎵 TikTok</a>`)
+    if (socialLinks.length) {
+      document.getElementById('bizSocial').innerHTML = socialLinks.join('')
+      document.getElementById('bizSocialBlock').style.display = ''
+      hasAny = true
+    }
+
+    if (hasAny) {
+      panel.style.display = ''
+      document.getElementById('contactLayout').style.gridTemplateColumns = '1fr 1fr'
+    }
+  } catch { /* no-op — info panel stays hidden */ }
+})()
+
 document.getElementById('contactForm').addEventListener('submit', async (e) => {
   e.preventDefault()
   const btn   = document.getElementById('contactSubmit')

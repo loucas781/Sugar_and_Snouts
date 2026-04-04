@@ -7,14 +7,23 @@ const { requireAuth } = require('../middleware/auth')
 
 const router = express.Router()
 
+function getSetting(key) {
+  try {
+    return db.prepare("SELECT value FROM app_preferences WHERE key = ?").get(key)?.value || null
+  } catch { return null }
+}
+
 function getTransport() {
-  const host = process.env.SMTP_HOST
+  const host = getSetting('smtp_host') || process.env.SMTP_HOST
   if (!host) return null
+  const port = parseInt(getSetting('smtp_port') || process.env.SMTP_PORT || 587)
+  const user = getSetting('smtp_user') || process.env.SMTP_USER
+  const pass = getSetting('smtp_pass') || process.env.SMTP_PASS
   return nodemailer.createTransport({
     host,
-    port: parseInt(process.env.SMTP_PORT || 587),
-    secure: process.env.SMTP_PORT === '465',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    port,
+    secure: port === 465,
+    auth: user ? { user, pass } : undefined
   })
 }
 
@@ -37,9 +46,10 @@ router.post('/', (req, res) => {
   // Attempt email send if SMTP configured
   const transport = getTransport()
   if (transport) {
-    const to = process.env.CONTACT_EMAIL || 'SugarandSnouts02@gmail.com'
+    const to = getSetting('order_notification_email') || getSetting('contact_email') || process.env.CONTACT_EMAIL || 'SugarandSnouts02@gmail.com'
+    const fromName = getSetting('email_from_name') || 'Sugar & Snouts'
     transport.sendMail({
-      from:    process.env.SMTP_FROM || `Sugar & Snouts <noreply@sugarandsnouts.co.uk>`,
+      from:    getSetting('smtp_from') || process.env.SMTP_FROM || `${fromName} <noreply@sugarandsnouts.co.uk>`,
       to,
       subject: `New message from ${name} — Sugar & Snouts`,
       text:    `Name: ${name}\nEmail: ${email}\nMessage:\n${message}\n\nMarketing opt-in: ${optin ? 'Yes' : 'No'}`
@@ -59,6 +69,30 @@ router.get('/admin', requireAuth, (req, res) => {
 router.patch('/admin/:id/read', requireAuth, (req, res) => {
   db.prepare('UPDATE contact_messages SET is_read = 1 WHERE id = ?').run(req.params.id)
   res.json({ ok: true })
+})
+
+// POST /api/contact/admin/smtp-test — send a test email (admin)
+router.post('/admin/smtp-test', requireAuth, async (req, res) => {
+  const transport = getTransport()
+  if (!transport) {
+    return res.status(400).json({ error: 'No SMTP configuration found. Please save your SMTP settings first.' })
+  }
+  const to = getSetting('order_notification_email') || getSetting('contact_email') || process.env.CONTACT_EMAIL
+  if (!to) {
+    return res.status(400).json({ error: 'No recipient email configured. Set an Order Notification Email or Contact Email first.' })
+  }
+  try {
+    const fromName = getSetting('email_from_name') || 'Sugar & Snouts'
+    await transport.sendMail({
+      from:    getSetting('smtp_from') || process.env.SMTP_FROM || `${fromName} <noreply@sugarandsnouts.co.uk>`,
+      to,
+      subject: 'Sugar & Snouts — SMTP test',
+      text:    'This is a test email confirming your SMTP configuration is working correctly.'
+    })
+    res.json({ ok: true, message: `Test email sent to ${to}` })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // DELETE /api/admin/messages/:id
