@@ -75,7 +75,19 @@ router.get('/images', requireAuth, (req, res) => {
 })
 
 // ── PUT /api/settings — update text/toggle settings (admin) ───────────────────
-const ALLOWED_KEYS = ['announcement', 'announcement_active', 'shop_open', 'hero_tagline']
+const ALLOWED_KEYS = [
+  'announcement', 'announcement_active', 'shop_open', 'hero_tagline',
+  // Contact
+  'contact_email', 'contact_phone', 'contact_address',
+  // Social
+  'social_facebook', 'social_instagram', 'social_tiktok',
+  // Business hours (one string per day, e.g. "9am – 5pm" or "Closed")
+  'hours_mon', 'hours_tue', 'hours_wed', 'hours_thu', 'hours_fri', 'hours_sat', 'hours_sun',
+  // SEO
+  'seo_title', 'seo_description',
+  // Order settings
+  'order_notice_hours', 'order_max_qty',
+]
 
 router.put('/', requireAuth, (req, res) => {
   const upsert = db.prepare(

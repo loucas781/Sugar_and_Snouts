@@ -201,6 +201,9 @@
           <button class="admin-tab"        data-stab="images"    onclick="switchSettingsTab('images')">🖼️ Images</button>
           <button class="admin-tab"        data-stab="homepage"  onclick="switchSettingsTab('homepage')">🏠 Home Page</button>
           <button class="admin-tab"        data-stab="shop"      onclick="switchSettingsTab('shop')">🏷️ Shop</button>
+          <button class="admin-tab"        data-stab="contact"   onclick="switchSettingsTab('contact')">📞 Contact</button>
+          <button class="admin-tab"        data-stab="hours"     onclick="switchSettingsTab('hours')">🕐 Hours</button>
+          <button class="admin-tab"        data-stab="seo"       onclick="switchSettingsTab('seo')">🔍 SEO</button>
           <button class="admin-tab"        data-stab="account"   onclick="switchSettingsTab('account')">🔐 Account</button>
           <button class="admin-tab"        data-stab="system"    onclick="switchSettingsTab('system')">🔧 System</button>
         </div>
@@ -274,6 +277,112 @@
                 <button class="btn-primary-admin" onclick="addCategory()">Add</button>
               </div>
               <div id="catAlert" style="display:none;margin-top:.7rem;padding:.6rem 1rem;border-radius:8px;font-size:.85rem"></div>
+            </div>
+          </div>
+          <div class="admin-panel" style="max-width:480px;margin-top:1.5rem">
+            <div class="admin-panel__header"><h2>Order Settings</h2></div>
+            <div class="admin-panel__body">
+              <div id="orderSettingsAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <div class="admin-form-group">
+                <label class="admin-label">Minimum Notice Period (hours)</label>
+                <input type="number" id="settingOrderNoticeHours" class="admin-input-field" min="0" step="1" placeholder="e.g. 24 — customers must order at least this many hours in advance">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Max Quantity per Order (all items combined)</label>
+                <input type="number" id="settingOrderMaxQty" class="admin-input-field" min="1" step="1" placeholder="Leave blank for no limit">
+              </div>
+              <button class="btn-primary-admin" onclick="saveOrderSettings()">Save Order Settings</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Contact ── -->
+        <div class="settings-sub-pane" id="stab-contact">
+          <div class="admin-panel" style="max-width:560px">
+            <div class="admin-panel__header"><h2>Contact Information</h2></div>
+            <div class="admin-panel__body">
+              <div id="contactAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <div class="admin-form-group">
+                <label class="admin-label">Email Address</label>
+                <input type="email" id="settingContactEmail" class="admin-input-field" placeholder="hello@yourbakery.com">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Phone Number</label>
+                <input type="tel" id="settingContactPhone" class="admin-input-field" placeholder="+44 7700 900000">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Address</label>
+                <textarea id="settingContactAddress" class="admin-textarea-field" rows="3" placeholder="123 Baker Street, London, W1U 8ED"></textarea>
+              </div>
+              <button class="btn-primary-admin" onclick="saveContactSettings()" style="margin-bottom:1.5rem">Save Contact Info</button>
+            </div>
+          </div>
+          <div class="admin-panel" style="max-width:560px;margin-top:1.5rem">
+            <div class="admin-panel__header"><h2>Social Media</h2></div>
+            <div class="admin-panel__body">
+              <div id="socialAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <div class="admin-form-group">
+                <label class="admin-label">Facebook URL</label>
+                <input type="url" id="settingSocialFacebook" class="admin-input-field" placeholder="https://facebook.com/yourbakery">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Instagram URL</label>
+                <input type="url" id="settingSocialInstagram" class="admin-input-field" placeholder="https://instagram.com/yourbakery">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">TikTok URL</label>
+                <input type="url" id="settingSocialTiktok" class="admin-input-field" placeholder="https://tiktok.com/@yourbakery">
+              </div>
+              <button class="btn-primary-admin" onclick="saveSocialSettings()">Save Social Links</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Hours ── -->
+        <div class="settings-sub-pane" id="stab-hours">
+          <div class="admin-panel" style="max-width:480px">
+            <div class="admin-panel__header"><h2>Business Hours</h2></div>
+            <div class="admin-panel__body">
+              <div id="hoursAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <p style="font-size:.85rem;color:#6b7280;margin-bottom:1.2rem">Enter hours as e.g. <strong>9am – 5pm</strong>, or <strong>Closed</strong>.</p>
+              <div style="display:grid;grid-template-columns:80px 1fr;gap:.6rem 1rem;align-items:center">
+                <label class="admin-label" style="margin:0">Monday</label>
+                <input type="text" id="settingHoursMon" class="admin-input-field" placeholder="9am – 5pm">
+                <label class="admin-label" style="margin:0">Tuesday</label>
+                <input type="text" id="settingHoursTue" class="admin-input-field" placeholder="9am – 5pm">
+                <label class="admin-label" style="margin:0">Wednesday</label>
+                <input type="text" id="settingHoursWed" class="admin-input-field" placeholder="9am – 5pm">
+                <label class="admin-label" style="margin:0">Thursday</label>
+                <input type="text" id="settingHoursThu" class="admin-input-field" placeholder="9am – 5pm">
+                <label class="admin-label" style="margin:0">Friday</label>
+                <input type="text" id="settingHoursFri" class="admin-input-field" placeholder="9am – 5pm">
+                <label class="admin-label" style="margin:0">Saturday</label>
+                <input type="text" id="settingHoursSat" class="admin-input-field" placeholder="10am – 4pm">
+                <label class="admin-label" style="margin:0">Sunday</label>
+                <input type="text" id="settingHoursSun" class="admin-input-field" placeholder="Closed">
+              </div>
+              <button class="btn-primary-admin" onclick="saveHoursSettings()" style="margin-top:1.2rem">Save Hours</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SEO ── -->
+        <div class="settings-sub-pane" id="stab-seo">
+          <div class="admin-panel" style="max-width:600px">
+            <div class="admin-panel__header"><h2>SEO &amp; Metadata</h2></div>
+            <div class="admin-panel__body">
+              <div id="seoAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <div class="admin-form-group">
+                <label class="admin-label">Page Title</label>
+                <input type="text" id="settingSeoTitle" class="admin-input-field" maxlength="70" placeholder="Sugar & Snouts — Baked Goods for People &amp; Pets">
+                <div style="font-size:.75rem;color:#9ca3af;margin-top:.3rem">Shown in browser tabs and search results. Keep under 60 characters.</div>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Meta Description</label>
+                <textarea id="settingSeoDescription" class="admin-textarea-field" rows="3" maxlength="160" placeholder="Handcrafted cookies, cupcakes and pet treats made with love in [your town]."></textarea>
+                <div style="font-size:.75rem;color:#9ca3af;margin-top:.3rem">Shown below your link in search results. Keep under 155 characters.</div>
+              </div>
+              <button class="btn-primary-admin" onclick="saveSeoSettings()">Save SEO Settings</button>
             </div>
           </div>
         </div>

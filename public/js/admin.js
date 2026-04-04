@@ -99,7 +99,10 @@ function loadSettingsSubTab(name) {
   if (name === 'general')  loadSiteSettings()
   if (name === 'images')   loadSiteImages()
   if (name === 'homepage') loadHomeExamples()
-  if (name === 'shop')     loadCategories()
+  if (name === 'shop')     { loadCategories(); loadOrderSettings() }
+  if (name === 'contact')  loadContactSettings()
+  if (name === 'hours')    loadHoursSettings()
+  if (name === 'seo')      loadSeoSettings()
   if (name === 'system')   loadBuildInfo()
   // account tab has no async data to load
 }
@@ -450,7 +453,11 @@ async function saveProduct() {
       if (_newImageFile) {
         const imgFd = new FormData()
         imgFd.append('image', _newImageFile)
-        await fetch(`/api/products/admin/${_editingProductId}/image`, { method: 'POST', body: imgFd })
+        const imgRes = await fetch(`/api/products/admin/${_editingProductId}/image`, { method: 'POST', body: imgFd })
+        if (!imgRes.ok) {
+          const imgErr = await imgRes.json().catch(() => ({}))
+          throw new Error(imgErr.error || 'Image upload failed')
+        }
       }
       res = await fetch(`/api/products/admin/${_editingProductId}`, {
         method: 'PUT',
@@ -929,6 +936,152 @@ async function saveSiteSettings() {
     if (!res.ok) throw new Error(json.error || 'Save failed')
     al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
     al.textContent = '✓ Settings saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── Contact & Social Settings ─────────────────────────────────────────────────
+async function loadContactSettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const set = (id, key) => { const el = document.getElementById(id); if (el) el.value = s[key] || '' }
+    set('settingContactEmail',    'contact_email')
+    set('settingContactPhone',    'contact_phone')
+    set('settingContactAddress',  'contact_address')
+    set('settingSocialFacebook',  'social_facebook')
+    set('settingSocialInstagram', 'social_instagram')
+    set('settingSocialTiktok',    'social_tiktok')
+  } catch { /* no-op */ }
+}
+
+async function saveContactSettings() {
+  const al = document.getElementById('contactAlert')
+  al.style.display = 'none'
+  const body = {
+    contact_email:   document.getElementById('settingContactEmail')?.value || '',
+    contact_phone:   document.getElementById('settingContactPhone')?.value || '',
+    contact_address: document.getElementById('settingContactAddress')?.value || '',
+  }
+  try {
+    const res = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ Contact info saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+async function saveSocialSettings() {
+  const al = document.getElementById('socialAlert')
+  al.style.display = 'none'
+  const body = {
+    social_facebook:  document.getElementById('settingSocialFacebook')?.value || '',
+    social_instagram: document.getElementById('settingSocialInstagram')?.value || '',
+    social_tiktok:    document.getElementById('settingSocialTiktok')?.value || '',
+  }
+  try {
+    const res = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ Social links saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── Hours Settings ────────────────────────────────────────────────────────────
+async function loadHoursSettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+    days.forEach(d => {
+      const el = document.getElementById(`settingHours${d}`)
+      if (el) el.value = s[`hours_${d.toLowerCase()}`] || ''
+    })
+  } catch { /* no-op */ }
+}
+
+async function saveHoursSettings() {
+  const al = document.getElementById('hoursAlert')
+  al.style.display = 'none'
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+  const body = {}
+  days.forEach(d => {
+    body[`hours_${d.toLowerCase()}`] = document.getElementById(`settingHours${d}`)?.value || ''
+  })
+  try {
+    const res = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ Business hours saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── SEO Settings ──────────────────────────────────────────────────────────────
+async function loadSeoSettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const titleEl = document.getElementById('settingSeoTitle')
+    const descEl  = document.getElementById('settingSeoDescription')
+    if (titleEl) titleEl.value = s.seo_title || ''
+    if (descEl)  descEl.value  = s.seo_description || ''
+  } catch { /* no-op */ }
+}
+
+async function saveSeoSettings() {
+  const al = document.getElementById('seoAlert')
+  al.style.display = 'none'
+  const body = {
+    seo_title:       document.getElementById('settingSeoTitle')?.value || '',
+    seo_description: document.getElementById('settingSeoDescription')?.value || '',
+  }
+  try {
+    const res = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ SEO settings saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── Order Settings ────────────────────────────────────────────────────────────
+async function loadOrderSettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const noticeEl = document.getElementById('settingOrderNoticeHours')
+    const maxQtyEl = document.getElementById('settingOrderMaxQty')
+    if (noticeEl) noticeEl.value = s.order_notice_hours || ''
+    if (maxQtyEl) maxQtyEl.value = s.order_max_qty || ''
+  } catch { /* no-op */ }
+}
+
+async function saveOrderSettings() {
+  const al = document.getElementById('orderSettingsAlert')
+  al.style.display = 'none'
+  const body = {
+    order_notice_hours: document.getElementById('settingOrderNoticeHours')?.value || '',
+    order_max_qty:      document.getElementById('settingOrderMaxQty')?.value || '',
+  }
+  try {
+    const res = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ Order settings saved'
   } catch (err) {
     al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
     al.textContent = '✗ ' + err.message
