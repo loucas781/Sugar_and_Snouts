@@ -53,6 +53,7 @@ async function initAdmin() {
       if (navUsers) navUsers.style.display = ''
     }
 
+    initAdminTheme()
     loadStats()
     setupTabs()
     loadCategories().then(setupProductFilters)
@@ -2181,6 +2182,46 @@ function clearAdminCache() {
   }
   showToast('Cache cleared — reloading…', 'success')
   setTimeout(() => window.location.reload(true), 800)
+}
+
+// ── Admin Theme ───────────────────────────────────────────────────────────────
+function _resolvedTheme(theme) {
+  // Resolve 'system' to the actual OS preference
+  if (theme === 'system') {
+    return (window.matchMedia && matchMedia('(prefers-color-scheme:dark)').matches) ? 'dark' : 'light'
+  }
+  return theme
+}
+
+function setAdminTheme(theme) {
+  if (theme === 'system') {
+    try { localStorage.removeItem('admTheme') } catch(e) {}
+  } else {
+    try { localStorage.setItem('admTheme', theme) } catch(e) {}
+  }
+  document.body.setAttribute('data-admin-theme', _resolvedTheme(theme))
+  // Mark the button that represents the user's choice (not the resolved value)
+  document.querySelectorAll('.admin-theme-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.theme === theme)
+  })
+}
+
+function initAdminTheme() {
+  // The early inline script already set the resolved theme attribute.
+  // Determine which button to mark active based on the stored preference.
+  let saved
+  try { saved = localStorage.getItem('admTheme') } catch(e) {}
+  const activeTheme = saved || 'system'
+  document.querySelectorAll('.admin-theme-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.theme === activeTheme)
+  })
+  // Follow OS changes in real-time when in system mode
+  if (window.matchMedia) {
+    matchMedia('(prefers-color-scheme:dark)').addEventListener('change', e => {
+      try { if (localStorage.getItem('admTheme')) return } catch(e) {}
+      document.body.setAttribute('data-admin-theme', e.matches ? 'dark' : 'light')
+    })
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

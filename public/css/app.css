@@ -1445,6 +1445,304 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
 .admin-alert.info    { background: #dbeafe; color: #1e40af; }
 .admin-alert.warning { background: #fef3c7; color: #92400e; }
 
+/* ╔══════════════════════════════════════════════════════════════════════════════
+   ADMIN THEME SYSTEM — Light / Dark / OLED
+   Applied via data-admin-theme on <body class="admin-body">.
+   ALL rules are scoped to body.admin-body so they NEVER affect the public site.
+══════════════════════════════════════════════════════════════════════════════╗ */
+
+/* ── Theme switcher widget ──────────────────────────────────────────────────── */
+.admin-theme-switcher {
+  display: flex;
+  gap: 2px;
+  background: #f0f1f5;
+  border-radius: 8px;
+  padding: 3px;
+}
+.admin-theme-btn {
+  width: 28px; height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: .85rem;
+  line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, opacity .15s;
+  opacity: .45;
+}
+.admin-theme-btn:hover { opacity: .85; }
+.admin-theme-btn.active {
+  background: white;
+  opacity: 1;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+
+/* ── Dark theme token definitions ───────────────────────────────────────────── */
+body.admin-body[data-admin-theme="dark"] {
+  --adm-bg:       #12141c;
+  --adm-surface:  #1e2030;
+  --adm-surface2: #262942;
+  --adm-bdr:      rgba(255,255,255,.08);
+  --adm-tbl-bdr:  rgba(255,255,255,.06);
+  --adm-text:     #dde1f5;
+  --adm-text2:    #b8bdd8;
+  --adm-muted:    #8890ab;
+  --adm-hover:    rgba(174,232,243,.06);
+  --adm-swbg:     rgba(255,255,255,.1);
+  --adm-sw-act:   rgba(255,255,255,.18);
+}
+
+/* ── OLED theme token definitions ───────────────────────────────────────────── */
+body.admin-body[data-admin-theme="oled"] {
+  --adm-bg:       #000000;
+  --adm-surface:  #080810;
+  --adm-surface2: #0e0e1a;
+  --adm-bdr:      rgba(255,255,255,.07);
+  --adm-tbl-bdr:  rgba(255,255,255,.05);
+  --adm-text:     #f0f0f8;
+  --adm-text2:    #c0c4d8;
+  --adm-muted:    #80809a;
+  --adm-hover:    rgba(255,255,255,.03);
+  --adm-swbg:     rgba(255,255,255,.07);
+  --adm-sw-act:   rgba(255,255,255,.15);
+}
+
+/* ── Shared dark + OLED overrides ───────────────────────────────────────────── */
+body.admin-body[data-admin-theme="dark"] .admin-layout,
+body.admin-body[data-admin-theme="oled"] .admin-layout { background: var(--adm-bg); }
+
+/* Sidebar — OLED gets pure black, dark keeps its existing deep navy */
+body.admin-body[data-admin-theme="oled"] .admin-sidebar { background: #000; }
+
+/* Topbar */
+body.admin-body[data-admin-theme="dark"] .admin-topbar,
+body.admin-body[data-admin-theme="oled"] .admin-topbar {
+  background: var(--adm-surface);
+  border-bottom-color: var(--adm-bdr);
+  box-shadow: none;
+}
+body.admin-body[data-admin-theme="dark"] .admin-topbar__title,
+body.admin-body[data-admin-theme="oled"] .admin-topbar__title { color: var(--adm-text); }
+body.admin-body[data-admin-theme="dark"] .admin-topbar__toggle,
+body.admin-body[data-admin-theme="oled"] .admin-topbar__toggle { color: var(--adm-text); }
+body.admin-body[data-admin-theme="dark"] .admin-topbar__user,
+body.admin-body[data-admin-theme="oled"] .admin-topbar__user { color: var(--adm-muted); }
+body.admin-body[data-admin-theme="dark"] .admin-signout-btn,
+body.admin-body[data-admin-theme="oled"] .admin-signout-btn { color: var(--adm-muted) !important; }
+
+/* Theme switcher in dark/oled contexts */
+body.admin-body[data-admin-theme="dark"] .admin-theme-switcher,
+body.admin-body[data-admin-theme="oled"] .admin-theme-switcher { background: var(--adm-swbg); }
+body.admin-body[data-admin-theme="dark"] .admin-theme-btn.active,
+body.admin-body[data-admin-theme="oled"] .admin-theme-btn.active { background: var(--adm-sw-act); box-shadow: none; }
+
+/* Panels */
+body.admin-body[data-admin-theme="dark"] .admin-panel,
+body.admin-body[data-admin-theme="oled"] .admin-panel {
+  background: var(--adm-surface);
+  box-shadow: 0 2px 12px rgba(0,0,0,.35);
+}
+body.admin-body[data-admin-theme="dark"] .admin-panel__header,
+body.admin-body[data-admin-theme="oled"] .admin-panel__header { border-bottom-color: var(--adm-bdr); }
+body.admin-body[data-admin-theme="dark"] .admin-panel__title,
+body.admin-body[data-admin-theme="oled"] .admin-panel__title { color: var(--adm-text); }
+body.admin-body[data-admin-theme="dark"] .admin-panel__footer,
+body.admin-body[data-admin-theme="oled"] .admin-panel__footer {
+  background: var(--adm-surface2);
+  border-top-color: var(--adm-bdr);
+  color: var(--adm-muted);
+}
+
+/* Tab header h2 */
+body.admin-body[data-admin-theme="dark"] .admin-tab-header h2,
+body.admin-body[data-admin-theme="oled"] .admin-tab-header h2 { color: var(--adm-text); }
+
+/* Stat cards */
+body.admin-body[data-admin-theme="dark"] .admin-stat-card,
+body.admin-body[data-admin-theme="dark"] .stat-card,
+body.admin-body[data-admin-theme="oled"] .admin-stat-card,
+body.admin-body[data-admin-theme="oled"] .stat-card {
+  background: var(--adm-surface);
+  box-shadow: 0 2px 12px rgba(0,0,0,.35);
+}
+body.admin-body[data-admin-theme="dark"] .stat-card__value,
+body.admin-body[data-admin-theme="dark"] .admin-stat-card__value,
+body.admin-body[data-admin-theme="oled"] .stat-card__value,
+body.admin-body[data-admin-theme="oled"] .admin-stat-card__value { color: var(--adm-text); }
+body.admin-body[data-admin-theme="dark"] .stat-card__label,
+body.admin-body[data-admin-theme="dark"] .admin-stat-card__label,
+body.admin-body[data-admin-theme="oled"] .stat-card__label,
+body.admin-body[data-admin-theme="oled"] .admin-stat-card__label { color: var(--adm-muted); }
+body.admin-body[data-admin-theme="dark"] .admin-stat-card.green .admin-stat-card__icon { background: rgba(34,197,94,.15); }
+body.admin-body[data-admin-theme="dark"] .admin-stat-card.purple .admin-stat-card__icon { background: rgba(168,85,247,.15); }
+body.admin-body[data-admin-theme="oled"] .admin-stat-card.green .admin-stat-card__icon { background: rgba(34,197,94,.1); }
+body.admin-body[data-admin-theme="oled"] .admin-stat-card.purple .admin-stat-card__icon { background: rgba(168,85,247,.1); }
+
+/* Tables */
+body.admin-body[data-admin-theme="dark"] .admin-table thead th,
+body.admin-body[data-admin-theme="oled"] .admin-table thead th {
+  background: var(--adm-surface2);
+  color: var(--adm-text2);
+  border-bottom-color: var(--adm-tbl-bdr);
+}
+body.admin-body[data-admin-theme="dark"] .admin-table tbody td,
+body.admin-body[data-admin-theme="oled"] .admin-table tbody td {
+  border-bottom-color: var(--adm-tbl-bdr);
+  color: var(--adm-text2);
+}
+body.admin-body[data-admin-theme="dark"] .admin-table .td-muted,
+body.admin-body[data-admin-theme="oled"] .admin-table .td-muted { color: var(--adm-muted); }
+body.admin-body[data-admin-theme="dark"] .admin-table tbody tr:hover,
+body.admin-body[data-admin-theme="oled"] .admin-table tbody tr:hover { background: var(--adm-hover); }
+
+/* Form labels */
+body.admin-body[data-admin-theme="dark"] .admin-label,
+body.admin-body[data-admin-theme="oled"] .admin-label { color: var(--adm-text2); }
+
+/* Form inputs */
+body.admin-body[data-admin-theme="dark"] .admin-input,
+body.admin-body[data-admin-theme="dark"] .admin-textarea,
+body.admin-body[data-admin-theme="dark"] .admin-select,
+body.admin-body[data-admin-theme="dark"] .admin-input-field,
+body.admin-body[data-admin-theme="dark"] .admin-textarea-field,
+body.admin-body[data-admin-theme="dark"] .admin-select-field,
+body.admin-body[data-admin-theme="oled"] .admin-input,
+body.admin-body[data-admin-theme="oled"] .admin-textarea,
+body.admin-body[data-admin-theme="oled"] .admin-select,
+body.admin-body[data-admin-theme="oled"] .admin-input-field,
+body.admin-body[data-admin-theme="oled"] .admin-textarea-field,
+body.admin-body[data-admin-theme="oled"] .admin-select-field {
+  background: var(--adm-surface2);
+  border-color: var(--adm-bdr);
+  color: var(--adm-text);
+}
+body.admin-body[data-admin-theme="dark"] .admin-input::placeholder,
+body.admin-body[data-admin-theme="dark"] .admin-textarea::placeholder,
+body.admin-body[data-admin-theme="oled"] .admin-input::placeholder,
+body.admin-body[data-admin-theme="oled"] .admin-textarea::placeholder { color: var(--adm-muted); }
+
+/* Search input */
+body.admin-body[data-admin-theme="dark"] .admin-search-input,
+body.admin-body[data-admin-theme="oled"] .admin-search-input {
+  background: var(--adm-surface2);
+  border-color: var(--adm-bdr);
+  color: var(--adm-text);
+}
+body.admin-body[data-admin-theme="dark"] .admin-search-input::placeholder,
+body.admin-body[data-admin-theme="oled"] .admin-search-input::placeholder { color: var(--adm-muted); }
+
+/* Modals */
+body.admin-body[data-admin-theme="dark"] .admin-modal,
+body.admin-body[data-admin-theme="oled"] .admin-modal { background: var(--adm-surface); }
+body.admin-body[data-admin-theme="dark"] .admin-modal__footer,
+body.admin-body[data-admin-theme="oled"] .admin-modal__footer { border-top-color: var(--adm-bdr); }
+body.admin-body[data-admin-theme="dark"] .admin-modal__body,
+body.admin-body[data-admin-theme="oled"] .admin-modal__body { color: var(--adm-text); }
+
+/* Settings tabs */
+body.admin-body[data-admin-theme="dark"] .admin-settings-tabs,
+body.admin-body[data-admin-theme="oled"] .admin-settings-tabs { border-bottom-color: var(--adm-bdr); }
+body.admin-body[data-admin-theme="dark"] .admin-settings-tab,
+body.admin-body[data-admin-theme="oled"] .admin-settings-tab { color: var(--adm-muted); }
+body.admin-body[data-admin-theme="dark"] .admin-settings-tab:hover,
+body.admin-body[data-admin-theme="oled"] .admin-settings-tab:hover { color: var(--adm-text); }
+body.admin-body[data-admin-theme="dark"] .admin-settings-tab.active,
+body.admin-body[data-admin-theme="oled"] .admin-settings-tab.active { color: var(--adm-text); }
+
+/* Setting rows */
+body.admin-body[data-admin-theme="dark"] .admin-setting-row,
+body.admin-body[data-admin-theme="oled"] .admin-setting-row { border-bottom-color: var(--adm-bdr); }
+body.admin-body[data-admin-theme="dark"] .admin-setting-row__label,
+body.admin-body[data-admin-theme="oled"] .admin-setting-row__label { color: var(--adm-text); }
+body.admin-body[data-admin-theme="dark"] .admin-setting-row__desc,
+body.admin-body[data-admin-theme="oled"] .admin-setting-row__desc { color: var(--adm-muted); }
+
+/* Date range buttons */
+body.admin-body[data-admin-theme="dark"] .admin-date-range-btn,
+body.admin-body[data-admin-theme="oled"] .admin-date-range-btn { background: var(--adm-surface2); color: var(--adm-muted); }
+body.admin-body[data-admin-theme="dark"] .admin-date-range-btn:hover,
+body.admin-body[data-admin-theme="oled"] .admin-date-range-btn:hover { background: var(--adm-hover); color: var(--adm-text); }
+
+/* Order items */
+body.admin-body[data-admin-theme="dark"] .admin-order-items,
+body.admin-body[data-admin-theme="oled"] .admin-order-items { background: var(--adm-surface2); }
+body.admin-body[data-admin-theme="dark"] .admin-order-items li,
+body.admin-body[data-admin-theme="oled"] .admin-order-items li { color: var(--adm-text2); }
+
+/* Chart placeholder */
+body.admin-body[data-admin-theme="dark"] .admin-chart-placeholder,
+body.admin-body[data-admin-theme="oled"] .admin-chart-placeholder { background: var(--adm-surface2); color: var(--adm-muted); }
+
+/* Subscriber count */
+body.admin-body[data-admin-theme="dark"] .admin-subscriber-count,
+body.admin-body[data-admin-theme="oled"] .admin-subscriber-count { color: var(--adm-text); }
+body.admin-body[data-admin-theme="dark"] .admin-subscriber-label,
+body.admin-body[data-admin-theme="oled"] .admin-subscriber-label { color: var(--adm-muted); }
+
+/* Product name / cat */
+body.admin-body[data-admin-theme="dark"] .admin-product-name,
+body.admin-body[data-admin-theme="oled"] .admin-product-name { color: var(--adm-text); }
+body.admin-body[data-admin-theme="dark"] .admin-product-cat,
+body.admin-body[data-admin-theme="oled"] .admin-product-cat { color: var(--adm-muted); }
+
+/* Outline + icon buttons */
+body.admin-body[data-admin-theme="dark"] .btn-admin-outline,
+body.admin-body[data-admin-theme="oled"] .btn-admin-outline { border-color: var(--adm-bdr); color: var(--adm-text2); }
+body.admin-body[data-admin-theme="dark"] .btn-admin-outline:hover,
+body.admin-body[data-admin-theme="oled"] .btn-admin-outline:hover { background: var(--adm-surface2); }
+body.admin-body[data-admin-theme="dark"] .btn-admin-icon:hover,
+body.admin-body[data-admin-theme="oled"] .btn-admin-icon:hover { background: rgba(255,255,255,.07); }
+
+/* Toggle switches */
+body.admin-body[data-admin-theme="dark"] .admin-toggle,
+body.admin-body[data-admin-theme="oled"] .admin-toggle { color: var(--adm-text); }
+body.admin-body[data-admin-theme="dark"] .admin-toggle__track,
+body.admin-body[data-admin-theme="oled"] .admin-toggle__track { background: rgba(255,255,255,.15); }
+
+/* Image upload + thumbs */
+body.admin-body[data-admin-theme="dark"] .admin-img-upload,
+body.admin-body[data-admin-theme="oled"] .admin-img-upload { border-color: var(--adm-bdr); color: var(--adm-muted); }
+body.admin-body[data-admin-theme="dark"] .admin-img-thumb,
+body.admin-body[data-admin-theme="oled"] .admin-img-thumb { border-color: var(--adm-bdr); }
+
+/* Slot list */
+body.admin-body[data-admin-theme="dark"] .slot-list li,
+body.admin-body[data-admin-theme="oled"] .slot-list li { border-bottom-color: var(--adm-bdr); color: var(--adm-text2); }
+
+/* Empty states */
+body.admin-body[data-admin-theme="dark"] .admin-empty,
+body.admin-body[data-admin-theme="oled"] .admin-empty { color: var(--adm-muted); }
+
+/* Alert boxes — restyled for dark backgrounds */
+body.admin-body[data-admin-theme="dark"] .admin-alert.success,
+body.admin-body[data-admin-theme="oled"] .admin-alert.success { background: rgba(34,197,94,.12); color: #6ee7b7; }
+body.admin-body[data-admin-theme="dark"] .admin-alert.error,
+body.admin-body[data-admin-theme="oled"] .admin-alert.error { background: rgba(220,38,38,.12); color: #fca5a5; }
+body.admin-body[data-admin-theme="dark"] .admin-alert.info,
+body.admin-body[data-admin-theme="oled"] .admin-alert.info { background: rgba(59,130,246,.12); color: #93c5fd; }
+body.admin-body[data-admin-theme="dark"] .admin-alert.warning,
+body.admin-body[data-admin-theme="oled"] .admin-alert.warning { background: rgba(217,119,6,.12); color: #fcd34d; }
+
+/* ── Inline-style text overrides (settings descriptions, modal sections) ─────── */
+/* Descriptive <p> text throughout settings panels */
+body.admin-body[data-admin-theme="dark"] .admin-panel__body p,
+body.admin-body[data-admin-theme="dark"] .admin-modal__body p,
+body.admin-body[data-admin-theme="oled"] .admin-panel__body p,
+body.admin-body[data-admin-theme="oled"] .admin-modal__body p { color: var(--adm-text2) !important; }
+
+/* Build info + password reset info blocks */
+body.admin-body[data-admin-theme="dark"] #buildInfo,
+body.admin-body[data-admin-theme="oled"] #buildInfo { color: var(--adm-text2) !important; }
+body.admin-body[data-admin-theme="dark"] #resetPwInfo,
+body.admin-body[data-admin-theme="oled"] #resetPwInfo { color: var(--adm-text2) !important; }
+
+/* Product modal section wrappers (Pricing / Tags / Advanced / Gallery) */
+body.admin-body[data-admin-theme="dark"] .admin-modal-section,
+body.admin-body[data-admin-theme="oled"] .admin-modal-section { background: var(--adm-surface2) !important; }
+body.admin-body[data-admin-theme="dark"] .admin-modal-section__label,
+body.admin-body[data-admin-theme="oled"] .admin-modal-section__label { color: var(--adm-text) !important; }
+
 /* ── Responsive — mobile sidebar ────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .admin-sidebar {

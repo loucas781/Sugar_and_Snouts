@@ -9,7 +9,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT&family=Pacifico&display=swap" rel="stylesheet">
   <title>Dashboard — Sugar & Snouts Admin</title>
 </head>
-<body class="admin-body">
+<body class="admin-body"><script>
+  /* Apply saved/system theme before first paint to avoid flash */
+  (function(){try{
+    var t=localStorage.getItem('admTheme');
+    if(!t||t==='system')t=(window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light';
+    document.body.setAttribute('data-admin-theme',t);
+  }catch(e){}}());
+</script>
 
 <div class="admin-layout">
 
@@ -87,7 +94,7 @@
     </nav>
 
     <div class="admin-sidebar__footer">
-      <a href="/" class="admin-view-site-btn" target="_blank" rel="noopener">
+      <a href="/" class="admin-view-site-btn">
         <span>🌐</span> View Website
       </a>
       <div id="versionTag" class="admin-sidebar__version" style="margin-top:.4rem"></div>
@@ -104,9 +111,15 @@
         <span class="admin-topbar__title" id="topbarTitle">Overview</span>
       </div>
       <div class="admin-topbar__right admin-topbar__user">
+        <div class="admin-theme-switcher" id="adminThemeSwitcher" aria-label="Theme switcher">
+          <button class="admin-theme-btn" data-theme="system" title="System (auto)" onclick="setAdminTheme('system')">⚙</button>
+          <button class="admin-theme-btn" data-theme="light"  title="Light mode"    onclick="setAdminTheme('light')">☀️</button>
+          <button class="admin-theme-btn" data-theme="dark"   title="Dark mode"     onclick="setAdminTheme('dark')">🌙</button>
+          <button class="admin-theme-btn" data-theme="oled"   title="OLED mode"     onclick="setAdminTheme('oled')">◼</button>
+        </div>
         <div class="admin-avatar admin-topbar__avatar" id="userInitials">A</div>
         <span id="userName" style="display:none;font-size:.9rem"></span>
-        <button onclick="doLogout()" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:.85rem">Sign out</button>
+        <button class="admin-signout-btn" onclick="doLogout()" style="background:none;border:none;cursor:pointer;font-size:.85rem">Sign out</button>
       </div>
     </div>
 
@@ -911,8 +924,8 @@
         </div>
 
         <!-- Pricing -->
-        <div style="background:#f9fafb;border-radius:10px;padding:1rem;margin-bottom:1rem">
-          <div style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:#374151">💰 Pricing</div>
+        <div class="admin-modal-section" style="background:#f9fafb;border-radius:10px;padding:1rem;margin-bottom:1rem">
+          <div class="admin-modal-section__label" style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:#374151">💰 Pricing</div>
           <div class="row">
             <div class="col-sm-4">
               <div class="admin-form-group">
@@ -951,8 +964,8 @@
         </div>
 
         <!-- Flags -->
-        <div style="background:#f9fafb;border-radius:10px;padding:1rem;margin-bottom:1rem">
-          <div style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:#374151">🏷️ Display Tags</div>
+        <div class="admin-modal-section" style="background:#f9fafb;border-radius:10px;padding:1rem;margin-bottom:1rem">
+          <div class="admin-modal-section__label" style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:#374151">🏷️ Display Tags</div>
           <div class="toggle-row">
             <span class="toggle-label">Available for purchase</span>
             <label class="toggle-switch"><input type="checkbox" name="isAvailable" id="pAvailable" checked><span class="toggle-slider"></span></label>
@@ -984,8 +997,8 @@
         </div>
 
         <!-- Advanced -->
-        <div style="background:#f9fafb;border-radius:10px;padding:1rem;margin-bottom:1rem">
-          <div style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:#374151">⚙️ Advanced</div>
+        <div class="admin-modal-section" style="background:#f9fafb;border-radius:10px;padding:1rem;margin-bottom:1rem">
+          <div class="admin-modal-section__label" style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:#374151">⚙️ Advanced</div>
           <div class="row">
             <div class="col-sm-6">
               <div class="admin-form-group">
@@ -1018,8 +1031,8 @@
         </div>
 
         <!-- Additional Images -->
-        <div style="background:#f9fafb;border-radius:10px;padding:1rem;margin-bottom:1rem" id="gallerySection" style="display:none">
-          <div style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:#374151">🖼️ Additional Images</div>
+        <div class="admin-modal-section" style="background:#f9fafb;border-radius:10px;padding:1rem;margin-bottom:1rem" id="gallerySection">
+          <div class="admin-modal-section__label" style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:#374151">🖼️ Additional Images</div>
           <div style="font-size:.78rem;color:#9ca3af;margin-bottom:.75rem">Save the product first, then add gallery images. They appear in a swipeable gallery in the product detail view.</div>
           <div class="admin-img-grid" id="galleryGrid"></div>
           <div style="margin-top:.75rem">
