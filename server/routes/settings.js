@@ -106,6 +106,12 @@ const ALLOWED_KEYS = [
   'order_notification_email', 'send_customer_confirmation', 'email_from_name',
   // SMTP configuration
   'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from',
+  // Stock & features
+  'low_stock_threshold', 'pickup_slots_enabled',
+  'newsletter_enabled', 'cookie_consent_enabled', 'show_wishlist',
+  'age_gate_text',
+  // Pages
+  'terms_content', 'privacy_content',
 ]
 
 router.put('/', requireAuth, (req, res) => {

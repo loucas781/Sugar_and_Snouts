@@ -56,19 +56,19 @@
 <!-- ── Shop Body ────────────────────────────────────────────────────────── -->
 <div class="container py-5">
 
-  <!-- Category filter (populated dynamically by shop.js) -->
+  <!-- Category filter -->
   <div class="category-filter" id="categoryFilter">
     <button class="category-btn active" data-cat="">All</button>
   </div>
 
   <!-- Filter tags -->
   <div class="d-flex gap-2 justify-content-center flex-wrap mb-4" id="tagFilter">
-    <button class="category-btn" data-tag="featured">⭐ Favourites</button>
+    <button class="category-btn" data-tag="wishlist">🤍 Wishlist</button>
     <button class="category-btn" data-tag="new">✨ New</button>
     <button class="category-btn" data-tag="recommended">🍰 Recommended</button>
   </div>
 
-  <!-- Allergen notice banner (shown when allergen_notice setting is set) -->
+  <!-- Allergen notice banner -->
   <div id="allergenNoticeBanner" style="display:none;margin-bottom:1.5rem;padding:.75rem 1.25rem;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;font-size:.9rem;color:#92400e">
     <strong>⚠️ Allergen Notice:</strong> <span id="allergenNoticeText"></span>
   </div>
@@ -87,14 +87,34 @@
     <div class="row">
       <div class="col-12 text-center">
         <div class="row mb-3">
-          <div class="col"><a href="/"       class="a-btn footer-link ltc-6728">Home</a></div>
-          <div class="col"><a href="/shop"    class="a-btn footer-link ltc-6728">Shop</a></div>
-          <div class="col"><a href="/contact" class="a-btn footer-link ltc-6728">Contact</a></div>
+          <div class="col"><a href="/"              class="a-btn footer-link ltc-6728">Home</a></div>
+          <div class="col"><a href="/shop"           class="a-btn footer-link ltc-6728">Shop</a></div>
+          <div class="col"><a href="/contact"        class="a-btn footer-link ltc-6728">Contact</a></div>
+          <div class="col"><a href="/order-status"   class="a-btn footer-link ltc-6728">Track Order</a></div>
+          <div class="col"><a href="/terms"          class="a-btn footer-link ltc-6728">Terms</a></div>
+          <div class="col"><a href="/privacy"        class="a-btn footer-link ltc-6728">Privacy</a></div>
         </div>
         <div class="divider-h mx-auto footer-divider"></div>
-        <p>Copyright © 2025–<script>document.write(new Date().getFullYear())</script> │ Sugar & Snouts │ All Rights Reserved</p>
+        <p>Copyright &copy; 2025&ndash;<script>document.write(new Date().getFullYear())</script> &nbsp;|&nbsp; Sugar &amp; Snouts &nbsp;|&nbsp; All Rights Reserved</p>
         <p id="versionTag" style="font-size:.75rem;opacity:.5"></p>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Age Gate Modal ────────────────────────────────────────────────────── -->
+<div class="sns-modal-overlay" id="ageGateOverlay">
+  <div class="sns-modal" style="max-width:400px">
+    <div class="sns-modal__header">
+      <h3>Age Verification 🔞</h3>
+    </div>
+    <div class="sns-modal__body" style="text-align:center">
+      <div style="font-size:3rem;margin-bottom:1rem">🔞</div>
+      <p id="ageGateMessage">This product is age-restricted. Please confirm you are 18 or over.</p>
+    </div>
+    <div class="sns-modal__footer" style="gap:.75rem">
+      <button class="btn-sns-secondary" id="ageGateDeny">No, I'm under 18</button>
+      <button class="btn-sns-primary" id="ageGateConfirm">Yes, I'm 18+</button>
     </div>
   </div>
 </div>
@@ -107,12 +127,14 @@
       <button class="cart-close" id="productDetailClose">✕</button>
     </div>
     <div class="sns-modal__body">
-      <div class="pd-image-wrap" id="pdImageWrap" style="display:none">
-        <img id="pdImage" src="" alt="" class="pd-image">
-      </div>
+      <div id="pdGallery" style="margin-bottom:1rem"></div>
       <div class="pd-category" id="pdCategory"></div>
       <div class="pd-price" id="pdPrice"></div>
       <div class="pd-description" id="pdDescription" style="display:none"></div>
+
+      <div class="pd-age-notice" id="pdAgeNotice" style="display:none;background:#fef9ec;border:1px solid #fcd34d;border-radius:8px;padding:.6rem .9rem;font-size:.85rem;color:#92400e;margin:.5rem 0">
+        🔞 This product is age-restricted. You must be 18 or over to purchase.
+      </div>
 
       <div class="pd-ingredients" id="pdIngredients" style="display:none">
         <div class="pd-section-label">Ingredients</div>
@@ -125,6 +147,7 @@
       </div>
 
       <div class="pd-limit" id="pdLimit" style="display:none"></div>
+      <div class="pd-lowstock" id="pdLowStock" style="display:none"></div>
     </div>
     <div class="sns-modal__footer">
       <button class="btn-sns-secondary" id="productDetailCancel">Close</button>
@@ -160,8 +183,19 @@
     <div class="sns-modal__body">
       <div id="orderFormIntro" style="display:none;margin-bottom:1rem;padding:.75rem 1rem;background:#f0fdf4;border-radius:8px;font-size:.9rem;color:#166534"></div>
       <div id="orderSummary" style="margin-bottom:1.5rem"></div>
+
+      <!-- Coupon code -->
+      <div class="sns-form-group" style="margin-bottom:1rem">
+        <label class="sns-label">Discount Code</label>
+        <div style="display:flex;gap:.5rem">
+          <input type="text" id="couponInput" class="sns-input" placeholder="Enter coupon code" style="flex:1;text-transform:uppercase">
+          <button type="button" id="applyCouponBtn" class="btn-sns-outline" style="white-space:nowrap">Apply</button>
+        </div>
+      </div>
+
       <div id="deliveryInfo" style="display:none;margin-bottom:1rem;padding:.75rem 1rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:.9rem;color:#374151"></div>
       <div id="paymentMethodsInfo" style="display:none;margin-bottom:1rem;padding:.75rem 1rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:.9rem;color:#374151"></div>
+
       <form id="orderForm">
         <div class="sns-form-group">
           <label class="sns-label">Your Name *</label>
@@ -175,6 +209,10 @@
           <label class="sns-label">Phone Number</label>
           <input type="tel" name="phone" class="sns-input" placeholder="07700 900000">
         </div>
+        <!-- Pickup slot (injected dynamically if enabled) -->
+        <div id="orderPickupSlotWrap" style="display:none" class="sns-form-group"></div>
+        <!-- Pre-order date (injected dynamically if max_days_ahead > 0) -->
+        <div id="orderDateWrap" style="display:none" class="sns-form-group"></div>
         <div class="sns-form-group">
           <label class="sns-label">Notes / Allergies</label>
           <textarea name="notes" class="sns-textarea" placeholder="Any dietary requirements, allergies, or special requests…"></textarea>

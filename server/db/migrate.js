@@ -36,7 +36,7 @@ const { v4: uuidv4 } = require('uuid')
 
 function migrate() {
   db.exec(`
-    -- ── Admin Users ───────────────────────────────────────────────────
+    -- Admin Users
     CREATE TABLE IF NOT EXISTS admin_users (
       id              TEXT PRIMARY KEY,
       name            TEXT NOT NULL,
@@ -51,7 +51,7 @@ function migrate() {
       created_at      TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    -- ── Products ──────────────────────────────────────────────────────
+    -- Products
     CREATE TABLE IF NOT EXISTS products (
       id               TEXT PRIMARY KEY,
       name             TEXT NOT NULL,
@@ -72,7 +72,7 @@ function migrate() {
       updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    -- ── Orders ────────────────────────────────────────────────────────
+    -- Orders
     CREATE TABLE IF NOT EXISTS orders (
       id              TEXT PRIMARY KEY,
       customer_name   TEXT NOT NULL,
@@ -88,7 +88,7 @@ function migrate() {
       updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    -- ── Contact Messages ──────────────────────────────────────────────
+    -- Contact Messages
     CREATE TABLE IF NOT EXISTS contact_messages (
       id         TEXT PRIMARY KEY,
       name       TEXT NOT NULL,
@@ -99,7 +99,7 @@ function migrate() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    -- ── Audit Log ─────────────────────────────────────────────────────
+    -- Audit Log
     CREATE TABLE IF NOT EXISTS audit_log (
       id          TEXT PRIMARY KEY,
       actor_id    TEXT,
@@ -112,7 +112,7 @@ function migrate() {
       created_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    -- ── Product Categories ────────────────────────────────────────────
+    -- Product Categories
     CREATE TABLE IF NOT EXISTS product_categories (
       id         TEXT PRIMARY KEY,
       name       TEXT NOT NULL UNIQUE,
@@ -120,14 +120,14 @@ function migrate() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    -- ── App Preferences ───────────────────────────────────────────────
+    -- App Preferences
     CREATE TABLE IF NOT EXISTS app_preferences (
       key        TEXT PRIMARY KEY,
       value      TEXT NOT NULL,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    -- ── Home Examples ─────────────────────────────────────────────────
+    -- Home Examples
     CREATE TABLE IF NOT EXISTS home_examples (
       id         TEXT PRIMARY KEY,
       title      TEXT NOT NULL,
@@ -135,9 +135,50 @@ function migrate() {
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- Product Images (gallery)
+    CREATE TABLE IF NOT EXISTS product_images (
+      id         TEXT PRIMARY KEY,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      image_path TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Pickup Slots
+    CREATE TABLE IF NOT EXISTS pickup_slots (
+      id         TEXT PRIMARY KEY,
+      label      TEXT NOT NULL,
+      is_active  INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Coupons
+    CREATE TABLE IF NOT EXISTS coupons (
+      id         TEXT PRIMARY KEY,
+      code       TEXT NOT NULL UNIQUE,
+      type       TEXT NOT NULL DEFAULT 'percentage'
+                   CHECK (type IN ('percentage','fixed')),
+      value      REAL NOT NULL,
+      max_uses   INTEGER,
+      uses_count INTEGER NOT NULL DEFAULT 0,
+      expires_at TEXT,
+      is_active  INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Newsletter Subscribers
+    CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+      id        TEXT PRIMARY KEY,
+      email     TEXT NOT NULL UNIQUE,
+      name      TEXT,
+      optin_at  TEXT NOT NULL DEFAULT (datetime('now')),
+      is_active INTEGER NOT NULL DEFAULT 1
+    );
   `)
 
-  // ── Safe column additions for existing DBs (idempotent) ─────────────────
+  // Safe column additions for existing DBs (idempotent)
   const existingCols = db.prepare("PRAGMA table_info(admin_users)").all().map(c => c.name)
   const addIfMissing = (col, def) => {
     if (!existingCols.includes(col)) {
@@ -150,11 +191,10 @@ function migrate() {
   addIfMissing('failed_attempts', 'INTEGER NOT NULL DEFAULT 0')
   addIfMissing('locked_until',    'TEXT')
 
-  // ── Safe column additions: products ─────────────────────────────────────
+  // Safe column additions: products
   const productCols = db.prepare("PRAGMA table_info(products)").all().map(c => c.name)
   if (!productCols.includes('category_id')) {
     db.exec('ALTER TABLE products ADD COLUMN category_id TEXT')
-    // Backfill: map old category value into category_id
     db.exec("UPDATE products SET category_id = category WHERE category_id IS NULL")
     console.log('  ✓  Added column products.category_id (backfilled from category)')
   }
@@ -178,8 +218,47 @@ function migrate() {
     db.exec('ALTER TABLE products ADD COLUMN stock_amount INTEGER')
     console.log('  ✓  Added column products.stock_amount')
   }
+  if (!productCols.includes('meta_description')) {
+    db.exec('ALTER TABLE products ADD COLUMN meta_description TEXT')
+    console.log('  ✓  Added column products.meta_description')
+  }
+  if (!productCols.includes('available_from')) {
+    db.exec('ALTER TABLE products ADD COLUMN available_from TEXT')
+    console.log('  ✓  Added column products.available_from')
+  }
+  if (!productCols.includes('available_until')) {
+    db.exec('ALTER TABLE products ADD COLUMN available_until TEXT')
+    console.log('  ✓  Added column products.available_until')
+  }
+  if (!productCols.includes('is_age_restricted')) {
+    db.exec('ALTER TABLE products ADD COLUMN is_age_restricted INTEGER NOT NULL DEFAULT 0')
+    console.log('  ✓  Added column products.is_age_restricted')
+  }
+  if (!productCols.includes('low_stock_threshold')) {
+    db.exec('ALTER TABLE products ADD COLUMN low_stock_threshold INTEGER')
+    console.log('  ✓  Added column products.low_stock_threshold')
+  }
 
-  // ── Seed default product categories if none exist ────────────────────────
+  // Safe column additions: orders
+  const orderCols = db.prepare("PRAGMA table_info(orders)").all().map(c => c.name)
+  if (!orderCols.includes('coupon_code')) {
+    db.exec('ALTER TABLE orders ADD COLUMN coupon_code TEXT')
+    console.log('  ✓  Added column orders.coupon_code')
+  }
+  if (!orderCols.includes('discount_amount')) {
+    db.exec('ALTER TABLE orders ADD COLUMN discount_amount REAL NOT NULL DEFAULT 0')
+    console.log('  ✓  Added column orders.discount_amount')
+  }
+  if (!orderCols.includes('pickup_slot')) {
+    db.exec('ALTER TABLE orders ADD COLUMN pickup_slot TEXT')
+    console.log('  ✓  Added column orders.pickup_slot')
+  }
+  if (!orderCols.includes('order_date')) {
+    db.exec('ALTER TABLE orders ADD COLUMN order_date TEXT')
+    console.log('  ✓  Added column orders.order_date')
+  }
+
+  // Seed default product categories if none exist
   const catCount = db.prepare('SELECT COUNT(*) as c FROM product_categories').get()
   if (catCount.c === 0) {
     const defaultCategories = [
@@ -194,15 +273,15 @@ function migrate() {
     console.log('  ✓  Default product categories seeded')
   }
 
-  // ── Seed default app preferences (INSERT OR IGNORE so new keys are backfilled) ─
+  // Seed default app preferences (INSERT OR IGNORE so new keys are backfilled)
   const defaults = [
     ['shop_open',                 '1'],
     ['announcement',              ''],
     ['announcement_active',       '0'],
-    ['hero_tagline',              'Baked goods for people and pets, joining you together for a sweet treat 🍪 🧁'],
+    ['hero_tagline',              'Baked goods for people and pets, joining you together for a sweet treat \uD83C\uDF6A \uD83E\uDDE1'],
     // General
     ['maintenance_mode',          '0'],
-    ['maintenance_message',       'We\'ll be back soon!'],
+    ['maintenance_message',       "We'll be back soon!"],
     ['site_name',                 'Sugar & Snouts'],
     ['footer_text',               ''],
     // Shop / Orders
@@ -215,6 +294,8 @@ function migrate() {
     ['order_form_intro',          ''],
     ['order_max_days_ahead',      ''],
     ['order_daily_limit',         ''],
+    // Pickup slots
+    ['pickup_slots_enabled',      '0'],
     // Homepage section visibility
     ['show_featured_section',     '1'],
     ['show_new_section',          '1'],
@@ -227,12 +308,22 @@ function migrate() {
     ['email_from_name',           ''],
     // SEO
     ['google_analytics_id',       ''],
+    // Stock
+    ['low_stock_threshold',       '5'],
+    // Customer features
+    ['newsletter_enabled',        '1'],
+    ['cookie_consent_enabled',    '1'],
+    ['show_wishlist',             '1'],
+    ['age_gate_text',             'This product is age-restricted. Please confirm you are 18 or over.'],
+    // Pages
+    ['terms_content',             ''],
+    ['privacy_content',           ''],
   ]
   const insertPref = db.prepare("INSERT OR IGNORE INTO app_preferences (key, value) VALUES (?, ?)")
   defaults.forEach(([k, v]) => insertPref.run(k, v))
   console.log('  ✓  Default app preferences seeded')
 
-  // ── Seed default home examples if none exist ─────────────────────────────────
+  // Seed default home examples if none exist
   const exCount = db.prepare('SELECT COUNT(*) as c FROM home_examples').get()
   if (exCount.c === 0) {
     const defaultExamples = [

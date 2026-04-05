@@ -17,37 +17,80 @@
   <aside class="admin-sidebar" id="adminSidebar">
     <div class="admin-sidebar__brand">
       <img src="/favicon.jpg" alt="Logo">
-      <span>Sugar & Snouts</span>
+      <div>
+        <div class="admin-sidebar__brand-text">Sugar & Snouts</div>
+        <div class="admin-sidebar__brand-sub">Admin Panel</div>
+      </div>
     </div>
 
     <nav class="admin-sidebar__nav">
-      <button class="admin-nav-item active" data-tab="overview">
-        <span class="nav-icon">📊</span> Overview
-      </button>
-      <button class="admin-nav-item" data-tab="products">
-        <span class="nav-icon">🧁</span> Products
-      </button>
-      <button class="admin-nav-item" data-tab="orders">
-        <span class="nav-icon">📦</span> Orders
-        <span class="admin-nav-badge" id="pendingBadge" style="display:none">0</span>
-      </button>
-      <button class="admin-nav-item" data-tab="messages">
-        <span class="nav-icon">💌</span> Messages
-        <span class="admin-nav-badge" id="unreadBadge" style="display:none">0</span>
-      </button>
-      <button class="admin-nav-item" data-tab="users" id="navUsers" style="display:none">
-        <span class="nav-icon">👥</span> Users
-      </button>
-      <button class="admin-nav-item" data-tab="settings">
-        <span class="nav-icon">⚙️</span> Settings
-      </button>
+
+      <!-- Store group -->
+      <div class="admin-nav-group open" id="sidebarGroupStore">
+        <div class="admin-nav-group__header" onclick="toggleSidebarGroup('store')">
+          <span class="admin-nav-group__label">Store</span>
+          <span class="admin-nav-group__chevron">▼</span>
+        </div>
+        <div class="admin-nav-group__items">
+          <button class="admin-nav-item active" data-tab="overview">
+            <span class="admin-nav-item__icon">📊</span> Overview
+          </button>
+          <button class="admin-nav-item" data-tab="analytics">
+            <span class="admin-nav-item__icon">📈</span> Analytics
+          </button>
+          <button class="admin-nav-item" data-tab="products">
+            <span class="admin-nav-item__icon">🧁</span> Products
+          </button>
+          <button class="admin-nav-item" data-tab="orders">
+            <span class="admin-nav-item__icon">📦</span> Orders
+            <span class="admin-nav-badge" id="pendingBadge" style="display:none">0</span>
+          </button>
+          <button class="admin-nav-item" data-tab="coupons">
+            <span class="admin-nav-item__icon">🎟</span> Coupons
+          </button>
+        </div>
+      </div>
+
+      <!-- Customers group -->
+      <div class="admin-nav-group open" id="sidebarGroupCustomers">
+        <div class="admin-nav-group__header" onclick="toggleSidebarGroup('customers')">
+          <span class="admin-nav-group__label">Customers</span>
+          <span class="admin-nav-group__chevron">▼</span>
+        </div>
+        <div class="admin-nav-group__items">
+          <button class="admin-nav-item" data-tab="messages">
+            <span class="admin-nav-item__icon">💌</span> Messages
+            <span class="admin-nav-badge" id="unreadBadge" style="display:none">0</span>
+          </button>
+          <button class="admin-nav-item" data-tab="newsletter">
+            <span class="admin-nav-item__icon">📧</span> Newsletter
+          </button>
+        </div>
+      </div>
+
+      <!-- Configuration group -->
+      <div class="admin-nav-group open" id="sidebarGroupConfig">
+        <div class="admin-nav-group__header" onclick="toggleSidebarGroup('config')">
+          <span class="admin-nav-group__label">Configuration</span>
+          <span class="admin-nav-group__chevron">▼</span>
+        </div>
+        <div class="admin-nav-group__items">
+          <button class="admin-nav-item" data-tab="settings">
+            <span class="admin-nav-item__icon">⚙️</span> Settings
+          </button>
+          <button class="admin-nav-item" data-tab="users" id="navUsers" style="display:none">
+            <span class="admin-nav-item__icon">👥</span> Users
+          </button>
+        </div>
+      </div>
+
     </nav>
 
     <div class="admin-sidebar__footer">
       <a href="/" class="admin-view-site-btn" target="_blank" rel="noopener">
         <span>🌐</span> View Website
       </a>
-      <div id="versionTag" style="margin-top:.6rem"></div>
+      <div id="versionTag" class="admin-sidebar__version" style="margin-top:.4rem"></div>
     </div>
   </aside>
 
@@ -56,12 +99,12 @@
 
     <!-- Topbar -->
     <div class="admin-topbar">
-      <div style="display:flex;align-items:center;gap:.8rem">
-        <button class="admin-sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu">☰</button>
+      <div class="admin-topbar__left">
+        <button class="admin-sidebar-toggle admin-topbar__toggle" id="sidebarToggle" aria-label="Toggle menu">☰</button>
         <span class="admin-topbar__title" id="topbarTitle">Overview</span>
       </div>
-      <div class="admin-topbar__user">
-        <div class="admin-avatar" id="userInitials">A</div>
+      <div class="admin-topbar__right admin-topbar__user">
+        <div class="admin-avatar admin-topbar__avatar" id="userInitials">A</div>
         <span id="userName" style="display:none;font-size:.9rem"></span>
         <button onclick="doLogout()" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:.85rem">Sign out</button>
       </div>
@@ -75,10 +118,11 @@
         <div class="stat-grid" id="statGrid">
           <div class="stat-card"><div class="stat-card__icon">🧁</div><div class="stat-card__label">Total Products</div><div class="stat-card__value" id="statProducts">—</div></div>
           <div class="stat-card"><div class="stat-card__icon">✅</div><div class="stat-card__label">Available</div><div class="stat-card__value" id="statAvailable">—</div></div>
-          <div class="stat-card"><div class="stat-card__icon">⭐</div><div class="stat-card__label">Featured</div><div class="stat-card__value" id="statFeatured">—</div></div>
           <div class="stat-card"><div class="stat-card__icon">📦</div><div class="stat-card__label">Total Orders</div><div class="stat-card__value" id="statOrders">—</div></div>
           <div class="stat-card"><div class="stat-card__icon">⏳</div><div class="stat-card__label">Pending Orders</div><div class="stat-card__value" id="statPending">—</div></div>
+          <div class="stat-card"><div class="stat-card__icon">💷</div><div class="stat-card__label">Total Revenue</div><div class="stat-card__value" id="statRevenue">—</div></div>
           <div class="stat-card"><div class="stat-card__icon">💌</div><div class="stat-card__label">Unread Messages</div><div class="stat-card__value" id="statMessages">—</div></div>
+          <div class="stat-card"><div class="stat-card__icon">📧</div><div class="stat-card__label">Subscribers</div><div class="stat-card__value" id="statSubscribers">—</div></div>
         </div>
         <div class="admin-panel">
           <div class="admin-panel__header"><h2>Quick Actions</h2></div>
@@ -152,6 +196,106 @@
         </div>
       </div>
 
+      <!-- ── Analytics Tab ──────────────────────────────────────────────── -->
+      <div class="admin-tab-pane" id="tab-analytics">
+        <div class="admin-panel">
+          <div class="admin-panel__header">
+            <h2>Revenue Analytics</h2>
+            <div class="admin-date-range" id="analyticsRange">
+              <button class="admin-date-range-btn active" data-days="7" onclick="loadAnalytics(7)">7d</button>
+              <button class="admin-date-range-btn" data-days="30" onclick="loadAnalytics(30)">30d</button>
+              <button class="admin-date-range-btn" data-days="90" onclick="loadAnalytics(90)">90d</button>
+            </div>
+          </div>
+          <div class="admin-panel__body">
+            <div class="admin-chart-wrap">
+              <canvas id="revenueChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="admin-panel" style="margin-top:1.25rem">
+          <div class="admin-panel__header"><h2>Top Products</h2></div>
+          <div class="admin-panel__body">
+            <div class="sns-spinner" id="analyticsSpinner"></div>
+            <div class="admin-table-wrap" id="topProductsWrap" style="display:none">
+              <table class="admin-table">
+                <thead><tr><th>#</th><th>Product</th><th>Units Sold</th><th>Revenue</th></tr></thead>
+                <tbody id="topProductsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Coupons Tab ─────────────────────────────────────────────────── -->
+      <div class="admin-tab-pane" id="tab-coupons">
+        <div class="admin-panel">
+          <div class="admin-panel__header">
+            <h2>Coupons</h2>
+            <button class="btn-primary-admin" onclick="openAddCoupon()">+ Add Coupon</button>
+          </div>
+          <div class="admin-panel__body">
+            <div class="sns-spinner" id="couponsSpinner"></div>
+            <div class="admin-table-wrap" id="couponsTableWrap" style="display:none">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Type</th>
+                    <th>Value</th>
+                    <th>Uses</th>
+                    <th>Expires</th>
+                    <th>Active</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="couponsBody"></tbody>
+              </table>
+            </div>
+            <div id="couponsEmpty" style="display:none;text-align:center;padding:3rem;color:var(--text-muted)">
+              <div style="font-size:3rem;margin-bottom:1rem">🎟</div>
+              <p>No coupons yet. Create your first discount code!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Newsletter Tab ──────────────────────────────────────────────── -->
+      <div class="admin-tab-pane" id="tab-newsletter">
+        <div class="admin-panel">
+          <div class="admin-panel__header">
+            <h2>Newsletter Subscribers</h2>
+            <button class="btn-secondary-admin" onclick="exportNewsletterCSV()">⬇ Export CSV</button>
+          </div>
+          <div class="admin-panel__body">
+            <div class="sns-spinner" id="newsletterSpinner"></div>
+            <div id="newsletterTableWrap" style="display:none">
+              <div style="margin-bottom:1rem;font-family:system-ui,sans-serif;font-size:.88rem;color:var(--text-muted)">
+                Total subscribers: <strong id="subscriberCount" style="color:var(--dark)">—</strong>
+              </div>
+              <div class="admin-table-wrap">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Email</th>
+                      <th>Name</th>
+                      <th>Joined</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="newsletterBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div id="newsletterEmpty" style="display:none;text-align:center;padding:3rem;color:var(--text-muted)">
+              <div style="font-size:3rem;margin-bottom:1rem">📧</div>
+              <p>No subscribers yet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── Messages Tab ─────────────────────────────────────────────── -->
       <div class="admin-tab-pane" id="tab-messages">
         <div class="admin-panel">
@@ -205,6 +349,7 @@
           <button class="admin-tab"        data-stab="contact"   onclick="switchSettingsTab('contact')">📞 Contact</button>
           <button class="admin-tab"        data-stab="hours"     onclick="switchSettingsTab('hours')">🕐 Hours</button>
           <button class="admin-tab"        data-stab="seo"       onclick="switchSettingsTab('seo')">🔍 SEO</button>
+          <button class="admin-tab"        data-stab="pages"     onclick="switchSettingsTab('pages')">📄 Pages</button>
           <button class="admin-tab"        data-stab="account"   onclick="switchSettingsTab('account')">🔐 Account</button>
           <button class="admin-tab"        data-stab="system"    onclick="switchSettingsTab('system')">🔧 System</button>
         </div>
@@ -392,6 +537,45 @@
           </div>
 
           <div class="admin-panel" style="max-width:480px;margin-top:1.5rem">
+            <div class="admin-panel__header"><h2>Pickup Slots</h2></div>
+            <div class="admin-panel__body">
+              <div id="pickupSlotsAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <div class="toggle-row" style="margin-bottom:1rem">
+                <span class="toggle-label">Enable Pickup Slot Selection</span>
+                <label class="toggle-switch"><input type="checkbox" id="settingPickupSlotsEnabled"><span class="toggle-slider"></span></label>
+              </div>
+              <div id="pickupSlotsList" style="margin-bottom:1rem"></div>
+              <div style="display:flex;gap:.5rem">
+                <input type="text" id="newPickupSlot" class="admin-input-field" placeholder="e.g. Saturday 10am–12pm" style="flex:1">
+                <button class="btn-primary-admin" onclick="addPickupSlot()">Add</button>
+              </div>
+              <button class="btn-primary-admin" onclick="savePickupSlotSettings()" style="margin-top:1rem">Save</button>
+            </div>
+          </div>
+
+          <div class="admin-panel" style="max-width:480px;margin-top:1.5rem">
+            <div class="admin-panel__header"><h2>Stock &amp; Age Settings</h2></div>
+            <div class="admin-panel__body">
+              <div id="stockSettingsAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <div class="admin-form-group">
+                <label class="admin-label">Global Low Stock Threshold</label>
+                <input type="number" id="settingLowStockThreshold" class="admin-input-field" min="0" placeholder="5">
+                <div style="font-size:.75rem;color:#9ca3af;margin-top:.3rem">Products below this stock count show a "Low Stock" badge. Per-product threshold overrides this.</div>
+              </div>
+              <div class="toggle-row" style="margin-bottom:1rem">
+                <span class="toggle-label">Cookie Consent Banner</span>
+                <label class="toggle-switch"><input type="checkbox" id="settingCookieConsentEnabled" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="admin-form-group" style="margin-top:.5rem">
+                <label class="admin-label">Age Gate Message</label>
+                <input type="text" id="settingAgeGateText" class="admin-input-field" placeholder="This product is age-restricted. Please confirm you are 18 or over.">
+                <div style="font-size:.75rem;color:#9ca3af;margin-top:.3rem">Shown in the age verification popup for restricted products.</div>
+              </div>
+              <button class="btn-primary-admin" onclick="saveStockAgeSettings()">Save</button>
+            </div>
+          </div>
+
+          <div class="admin-panel" style="max-width:480px;margin-top:1.5rem">
             <div class="admin-panel__header"><h2>Delivery</h2></div>
             <div class="admin-panel__body">
               <div id="deliveryAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
@@ -563,6 +747,34 @@
                 <div style="font-size:.75rem;color:#9ca3af;margin-top:.3rem">Leave blank to disable tracking. The GA4 script is injected automatically on all public pages.</div>
               </div>
               <button class="btn-primary-admin" onclick="saveAnalyticsSettings()">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Pages ── -->
+        <div class="settings-sub-pane" id="stab-pages">
+          <div class="admin-panel" style="max-width:700px">
+            <div class="admin-panel__header"><h2>Terms &amp; Conditions</h2></div>
+            <div class="admin-panel__body">
+              <div id="termsContentAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <p style="font-size:.85rem;color:#6b7280;margin-bottom:1rem">Enter the full HTML or plain text for your Terms &amp; Conditions page. Leave blank to show a "coming soon" placeholder.</p>
+              <div class="admin-form-group">
+                <label class="admin-label">Content</label>
+                <textarea id="settingTermsContent" class="admin-textarea-field" rows="14" placeholder="&lt;h2&gt;1. Introduction&lt;/h2&gt;&#10;&lt;p&gt;These terms and conditions...&lt;/p&gt;"></textarea>
+              </div>
+              <button class="btn-primary-admin" onclick="saveTermsContent()">Save Terms Content</button>
+            </div>
+          </div>
+          <div class="admin-panel" style="max-width:700px;margin-top:1.5rem">
+            <div class="admin-panel__header"><h2>Privacy Policy</h2></div>
+            <div class="admin-panel__body">
+              <div id="privacyContentAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <p style="font-size:.85rem;color:#6b7280;margin-bottom:1rem">Enter the full HTML or plain text for your Privacy Policy page.</p>
+              <div class="admin-form-group">
+                <label class="admin-label">Content</label>
+                <textarea id="settingPrivacyContent" class="admin-textarea-field" rows="14" placeholder="&lt;h2&gt;What data we collect&lt;/h2&gt;&#10;&lt;p&gt;We collect...&lt;/p&gt;"></textarea>
+              </div>
+              <button class="btn-primary-admin" onclick="savePrivacyContent()">Save Privacy Content</button>
             </div>
           </div>
         </div>
@@ -747,6 +959,57 @@
             <span class="toggle-label">🚫 Out of Stock</span>
             <label class="toggle-switch"><input type="checkbox" name="isOutOfStock" id="pOutOfStock"><span class="toggle-slider"></span></label>
           </div>
+          <div class="toggle-row">
+            <span class="toggle-label">🔞 Age Restricted (18+)</span>
+            <label class="toggle-switch"><input type="checkbox" name="isAgeRestricted" id="pAgeRestricted"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <!-- Advanced -->
+        <div style="background:#f9fafb;border-radius:10px;padding:1rem;margin-bottom:1rem">
+          <div style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:#374151">⚙️ Advanced</div>
+          <div class="row">
+            <div class="col-sm-6">
+              <div class="admin-form-group">
+                <label class="admin-label">Low Stock Threshold</label>
+                <input type="number" name="lowStockThreshold" id="pLowStockThreshold" class="admin-input-field" min="0" placeholder="Uses global setting if blank">
+                <div style="font-size:.72rem;color:#9ca3af;margin-top:.25rem">Shows "low stock" badge below this count</div>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="admin-form-group">
+                <label class="admin-label">Meta Description</label>
+                <input type="text" name="metaDescription" id="pMetaDescription" class="admin-input-field" maxlength="160" placeholder="SEO description for this product">
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="admin-form-group">
+                <label class="admin-label">Available From</label>
+                <input type="datetime-local" name="availableFrom" id="pAvailableFrom" class="admin-input-field">
+                <div style="font-size:.72rem;color:#9ca3af;margin-top:.25rem">Product hidden on shop before this date</div>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="admin-form-group">
+                <label class="admin-label">Available Until</label>
+                <input type="datetime-local" name="availableUntil" id="pAvailableUntil" class="admin-input-field">
+                <div style="font-size:.72rem;color:#9ca3af;margin-top:.25rem">Product hidden on shop after this date</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Additional Images -->
+        <div style="background:#f9fafb;border-radius:10px;padding:1rem;margin-bottom:1rem" id="gallerySection" style="display:none">
+          <div style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:#374151">🖼️ Additional Images</div>
+          <div style="font-size:.78rem;color:#9ca3af;margin-bottom:.75rem">Save the product first, then add gallery images. They appear in a swipeable gallery in the product detail view.</div>
+          <div class="admin-img-grid" id="galleryGrid"></div>
+          <div style="margin-top:.75rem">
+            <label class="btn-secondary-admin" style="cursor:pointer;font-size:.8rem;padding:.35rem .9rem">
+              + Add Image
+              <input type="file" id="galleryImageInput" accept="image/*" style="display:none" onchange="uploadGalleryImage(this)">
+            </label>
+          </div>
         </div>
 
       </form>
@@ -856,8 +1119,65 @@
   </div>
 </div>
 
+<!-- ── Coupon Modal ────────────────────────────────────────────────────────── -->
+<div class="admin-modal-overlay" id="couponModalOverlay">
+  <div class="admin-modal" style="max-width:440px">
+    <div class="admin-modal__header">
+      <h3 id="couponModalTitle">Add Coupon</h3>
+      <button class="modal-close" onclick="closeCouponModal()">✕</button>
+    </div>
+    <div class="admin-modal__body">
+      <div id="couponAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+      <form id="couponForm">
+        <input type="hidden" id="couponId">
+        <div class="admin-form-group">
+          <label class="admin-label">Coupon Code *</label>
+          <input type="text" id="cCode" class="admin-input-field" required placeholder="e.g. SUMMER10" style="text-transform:uppercase" maxlength="30">
+        </div>
+        <div class="row">
+          <div class="col-sm-6">
+            <div class="admin-form-group">
+              <label class="admin-label">Type *</label>
+              <select id="cType" class="admin-select-field">
+                <option value="percentage">Percentage (%)</option>
+                <option value="fixed">Fixed (£)</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="admin-form-group">
+              <label class="admin-label">Value *</label>
+              <input type="number" id="cValue" class="admin-input-field" required min="0" step="0.01" placeholder="10">
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="admin-form-group">
+              <label class="admin-label">Max Uses</label>
+              <input type="number" id="cMaxUses" class="admin-input-field" min="1" placeholder="Unlimited if blank">
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="admin-form-group">
+              <label class="admin-label">Expires At</label>
+              <input type="datetime-local" id="cExpiresAt" class="admin-input-field">
+            </div>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Active</span>
+          <label class="toggle-switch"><input type="checkbox" id="cActive" checked><span class="toggle-slider"></span></label>
+        </div>
+      </form>
+    </div>
+    <div class="admin-modal__footer">
+      <button class="btn-secondary-admin" onclick="closeCouponModal()">Cancel</button>
+      <button class="btn-primary-admin" onclick="saveCoupon()">Save Coupon</button>
+    </div>
+  </div>
+</div>
+
 <!-- Sidebar overlay for mobile -->
-<div id="sidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99"></div>
+<div id="sidebarOverlay" class="admin-sidebar-overlay" onclick="toggleSidebar()"></div>
 
 <!-- Crop modal -->
 <div class="admin-modal-overlay" id="cropModalOverlay" style="z-index:1100">
@@ -879,6 +1199,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 <script src="/js/app.js"></script>
 <script src="/js/admin.js"></script>

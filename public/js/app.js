@@ -1,7 +1,7 @@
 /* Sugar & Snouts — shared app utilities */
 'use strict'
 
-// ── Version tag (matches ForgeShift / ForgeTrack pattern) ────────────────────
+// ── Version tag ───────────────────────────────────────────────────────────────
 async function initVersionTag(el) {
   if (!el) return
   try {
@@ -48,6 +48,10 @@ const Cart = {
   },
 
   add(product, qty = 1) {
+    if (product.isOutOfStock) {
+      showToast(`"${product.name}" is out of stock`, 'error')
+      return false
+    }
     const items = this.get()
     const existing = items.find(i => i.id === product.id)
     if (existing) {
@@ -172,7 +176,11 @@ function renderCartDrawer() {
             <button class="qty-btn" data-qty-inc="${item.id}">+</button>
           </div>
         </div>
-        <button class="cart-item__remove" data-remove="${item.id}" title="Remove">✕</button>
+        <button class="cart-item__remove" data-remove="${item.id}" title="Remove item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>
+          </svg>
+        </button>
       </div>`).join('')
 
     body.querySelectorAll('[data-qty-dec]').forEach(btn =>
@@ -190,25 +198,97 @@ function renderCartDrawer() {
 }
 
 // ── Order Modal ───────────────────────────────────────────────────────────────
-function initOrderModal() {
+let _appliedCoupon = null
+
+async function initOrderModal() {
   const overlay = document.getElementById('orderModalOverlay')
   if (!overlay) return
 
+  // Load settings to determine pickup slots / pre-order / coupon options
+  let settings = {}
+  try { settings = await fetch('/api/settings').then(r => r.json()) } catch { /* no-op */ }
+
   const btn = document.getElementById('cartCheckout')
-  btn?.addEventListener('click', () => {
+  btn?.addEventListener('click', async () => {
     if (btn.disabled || !Cart.count() || !_shopOpen) return
+    _appliedCoupon = null
+
+    // Inject pickup slot selector if enabled
+    const slotsWrap = document.getElementById('orderPickupSlotWrap')
+    if (slotsWrap) {
+      if (settings.pickup_slots_enabled === '1') {
+        try {
+          const slots = await fetch('/api/pickup-slots').then(r => r.json())
+          if (slots.length) {
+            slotsWrap.innerHTML = `
+              <label class="order-label" for="orderPickupSlot">Pickup Slot</label>
+              <select class="order-input" id="orderPickupSlot" name="pickupSlot" required>
+                <option value="">— Select a pickup slot —</option>
+                ${slots.map(s => `<option value="${s.id}">${s.label}</option>`).join('')}
+              </select>`
+            slotsWrap.style.display = ''
+          } else { slotsWrap.style.display = 'none' }
+        } catch { slotsWrap.style.display = 'none' }
+      } else { slotsWrap.style.display = 'none' }
+    }
+
+    // Pre-order date picker
+    const dateWrap = document.getElementById('orderDateWrap')
+    if (dateWrap) {
+      const maxDays = parseInt(settings.order_max_days_ahead || '0')
+      if (maxDays > 0) {
+        const today = new Date()
+        const maxDate = new Date(today); maxDate.setDate(maxDate.getDate() + maxDays)
+        const fmt = d => d.toISOString().split('T')[0]
+        dateWrap.innerHTML = `
+          <label class="order-label" for="orderDate">Preferred Date</label>
+          <input class="order-input" type="date" id="orderDate" name="orderDate"
+            min="${fmt(today)}" max="${fmt(maxDate)}">`
+        dateWrap.style.display = ''
+      } else { dateWrap.style.display = 'none' }
+    }
+
     overlay.classList.add('open')
     renderOrderSummary()
   })
 
-  document.getElementById('orderModalClose')?.addEventListener('click', () => overlay.classList.remove('open'))
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('open') })
+  document.getElementById('orderModalClose')?.addEventListener('click', () => {
+    overlay.classList.remove('open')
+    _appliedCoupon = null
+  })
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.classList.remove('open'); _appliedCoupon = null } })
+
+  // Coupon apply button
+  document.getElementById('applyCouponBtn')?.addEventListener('click', async () => {
+    const input = document.getElementById('couponInput')
+    const code  = input?.value.trim()
+    if (!code) return
+
+    const applyBtn = document.getElementById('applyCouponBtn')
+    applyBtn.disabled = true
+    applyBtn.textContent = '...'
+    try {
+      const res  = await fetch(`/api/coupons/validate?code=${encodeURIComponent(code)}`)
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      _appliedCoupon = json
+      renderOrderSummary()
+      showToast(`Coupon applied: ${json.type === 'percentage' ? `${json.value}% off` : `£${json.value.toFixed(2)} off`}`, 'success')
+    } catch (err) {
+      _appliedCoupon = null
+      renderOrderSummary()
+      showToast(err.message, 'error')
+    } finally {
+      applyBtn.disabled = false
+      applyBtn.textContent = 'Apply'
+    }
+  })
 
   document.getElementById('orderForm')?.addEventListener('submit', async (e) => {
     e.preventDefault()
-    const btn = e.target.querySelector('[type=submit]')
-    btn.disabled = true
-    btn.textContent = 'Submitting…'
+    const submitBtn = e.target.querySelector('[type=submit]')
+    submitBtn.disabled = true
+    submitBtn.textContent = 'Submitting…'
     try {
       const data = new FormData(e.target)
       const body = {
@@ -216,20 +296,24 @@ function initOrderModal() {
         customerEmail: data.get('email'),
         customerPhone: data.get('phone'),
         notes:         data.get('notes'),
-        items:         Cart.get().map(i => ({ productId: i.id, quantity: i.quantity }))
+        items:         Cart.get().map(i => ({ productId: i.id, quantity: i.quantity })),
+        couponCode:    _appliedCoupon ? _appliedCoupon.code : undefined,
+        pickupSlot:    data.get('pickupSlot') || undefined,
+        orderDate:     data.get('orderDate')  || undefined,
       }
-      const res = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const res  = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Order failed')
       Cart.clear()
       overlay.classList.remove('open')
+      _appliedCoupon = null
       showToast('🎉 Order placed! We\'ll be in touch soon.', 'success')
       e.target.reset()
     } catch (err) {
       showToast(err.message, 'error')
     } finally {
-      btn.disabled = false
-      btn.textContent = 'Place Order'
+      submitBtn.disabled = false
+      submitBtn.textContent = 'Place Order'
     }
   })
 }
@@ -237,18 +321,36 @@ function initOrderModal() {
 function renderOrderSummary() {
   const el = document.getElementById('orderSummary')
   if (!el) return
-  const items = Cart.get()
+  const items    = Cart.get()
+  const subtotal = Cart.total()
+
+  let discountAmount = 0
+  let discountLine = ''
+  if (_appliedCoupon) {
+    discountAmount = _appliedCoupon.type === 'percentage'
+      ? Math.round(subtotal * (_appliedCoupon.value / 100) * 100) / 100
+      : Math.min(_appliedCoupon.value, subtotal)
+    discountLine = `
+      <div style="display:flex;justify-content:space-between;padding:.4rem 0;font-size:.85rem;color:#888">
+        <span>Discount (${_appliedCoupon.code})</span>
+        <span style="color:#22c55e">−£${discountAmount.toFixed(2)}</span>
+      </div>`
+  }
+
+  const finalTotal = Math.max(0, subtotal - discountAmount)
+
   el.innerHTML = items.map(i => `
     <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid #f0f0f0;font-size:.9rem">
       <span>${i.name} × ${i.quantity}</span>
       <span>£${(i.price * i.quantity).toFixed(2)}</span>
     </div>`).join('')
-  + `<div style="display:flex;justify-content:space-between;padding:.7rem 0;font-weight:700">
-      <span>Total</span><span>£${Cart.total().toFixed(2)}</span>
+    + discountLine
+    + `<div style="display:flex;justify-content:space-between;padding:.7rem 0;font-weight:700">
+      <span>Total</span><span>£${finalTotal.toFixed(2)}</span>
     </div>`
 }
 
-// ── Admin nav link (shown only when authenticated) ────────────────────────────
+// ── Admin nav link ────────────────────────────────────────────────────────────
 async function initAdminLink() {
   try {
     const res = await fetch('/api/auth/me', { credentials: 'same-origin' })
@@ -259,11 +361,11 @@ async function initAdminLink() {
     li.className = 'nav-item ms-lg-1'
     li.innerHTML = '<a class="nav-link" href="/admin/dashboard">Admin</a>'
     nav.appendChild(li)
-  } catch { /* not authenticated or no nav — no-op */ }
+  } catch { /* no-op */ }
 }
 
-// ── Site status: announcement banner + shop-closed state ─────────────────────
-let _shopOpen = true // optimistic default until settings load
+// ── Site status ───────────────────────────────────────────────────────────────
+let _shopOpen = true
 
 async function initAnnouncement() {
   try {
@@ -285,7 +387,6 @@ async function initAnnouncement() {
         checkoutBtn.textContent = '🔒 Shop Currently Closed'
       }
 
-      // Show a visible closed banner on pages that have the shop grid
       const shopGrid = document.getElementById('shopGrid')
       if (shopGrid) {
         const closed = document.createElement('div')
@@ -295,6 +396,51 @@ async function initAnnouncement() {
       }
     }
   } catch { /* no-op */ }
+}
+
+// ── Cookie Consent ────────────────────────────────────────────────────────────
+function initCookieConsent(gaId) {
+  if (localStorage.getItem('sns_consent') === 'accepted') {
+    loadAnalytics(gaId)
+    return
+  }
+  if (localStorage.getItem('sns_consent') === 'declined') return
+
+  const bar = document.createElement('div')
+  bar.className = 'sns-cookie-bar'
+  bar.innerHTML = `
+    <span class="sns-cookie-bar__text">We use cookies to improve your experience and for analytics. <a href="/privacy" class="sns-cookie-bar__link">Privacy Policy</a></span>
+    <div class="sns-cookie-bar__actions">
+      <button class="sns-cookie-bar__btn sns-cookie-bar__btn--decline" id="cookieDecline">Decline</button>
+      <button class="sns-cookie-bar__btn sns-cookie-bar__btn--accept" id="cookieAccept">Accept</button>
+    </div>`
+  document.body.appendChild(bar)
+
+  setTimeout(() => bar.classList.add('show'), 100)
+
+  document.getElementById('cookieAccept')?.addEventListener('click', () => {
+    localStorage.setItem('sns_consent', 'accepted')
+    bar.classList.remove('show')
+    setTimeout(() => bar.remove(), 400)
+    loadAnalytics(gaId)
+  })
+  document.getElementById('cookieDecline')?.addEventListener('click', () => {
+    localStorage.setItem('sns_consent', 'declined')
+    bar.classList.remove('show')
+    setTimeout(() => bar.remove(), 400)
+  })
+}
+
+function loadAnalytics(gaId) {
+  if (!gaId || document.getElementById('ga-script')) return
+  const script = document.createElement('script')
+  script.id    = 'ga-script'
+  script.src   = `https://www.googletagmanager.com/gtag/js?id=${gaId}`
+  script.async = true
+  document.head.appendChild(script)
+  const inline = document.createElement('script')
+  inline.textContent = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${gaId}')`
+  document.head.appendChild(inline)
 }
 
 // ── Init on DOM ready ─────────────────────────────────────────────────────────

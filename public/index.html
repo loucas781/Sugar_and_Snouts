@@ -213,14 +213,38 @@
 </div>
 
 <!-- ── Footer ─────────────────────────────────────────────────────────────── -->
+
+<!-- Newsletter signup -->
+<div class="bloc bgc-7376 l-bloc" style="background:linear-gradient(135deg,var(--pink) 0%,var(--blue) 100%);padding:3rem 0" id="newsletter-section">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-6 text-center">
+        <h2 style="font-family:'Pacifico',cursive;font-size:1.8rem;color:var(--dark);margin-bottom:.5rem">Stay in the Loop 💌</h2>
+        <p style="color:rgba(35,35,35,.75);margin-bottom:1.5rem">Get news about new treats, seasonal specials, and exclusive offers.</p>
+        <div id="newsletterForm" style="display:flex;flex-direction:column;gap:.75rem;max-width:380px;margin:0 auto">
+          <input type="text" id="nlName" class="sns-input" placeholder="Your name" style="background:rgba(255,255,255,.85);border:none">
+          <input type="email" id="nlEmail" class="sns-input" placeholder="Your email address" style="background:rgba(255,255,255,.85);border:none">
+          <button id="nlSubmit" class="btn-sns-primary" style="background:var(--dark);color:#fff">Subscribe</button>
+        </div>
+        <div id="newsletterSuccess" style="display:none;padding:1rem;background:rgba(255,255,255,.8);border-radius:10px;color:var(--dark);font-weight:600">
+          🎉 Thanks for subscribing!
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="bloc bgc-7376 d-bloc" id="footer">
   <div class="container bloc-lg-lg bloc-md bloc-lg-md">
     <div class="row align-items-start">
       <div class="align-self-end text-center col-sm-12">
         <div class="row">
-          <div class="col"><a href="/"       class="a-btn footer-link ltc-6728 a-block">Home</a></div>
-          <div class="col"><a href="/shop"    class="a-btn footer-link ltc-6728 a-block">Shop</a></div>
-          <div class="col"><a href="/contact" class="a-btn footer-link ltc-6728 a-block">Contact</a></div>
+          <div class="col"><a href="/"            class="a-btn footer-link ltc-6728 a-block">Home</a></div>
+          <div class="col"><a href="/shop"         class="a-btn footer-link ltc-6728 a-block">Shop</a></div>
+          <div class="col"><a href="/contact"      class="a-btn footer-link ltc-6728 a-block">Contact</a></div>
+          <div class="col"><a href="/order-status" class="a-btn footer-link ltc-6728 a-block">Track Order</a></div>
+          <div class="col"><a href="/terms"        class="a-btn footer-link ltc-6728 a-block">Terms</a></div>
+          <div class="col"><a href="/privacy"      class="a-btn footer-link ltc-6728 a-block">Privacy</a></div>
         </div>
         <div>
           <a href="https://www.instagram.com/sugar_and_snouts" class="instagram-link" target="_blank" aria-label="Instagram">
@@ -291,5 +315,30 @@
 <script src="/js/blocs.min.js"></script>
 <script src="/js/app.js"></script>
 <script src="/js/home.js"></script>
+<script>
+(function(){
+  var nlSubmit = document.getElementById('nlSubmit')
+  if (!nlSubmit) return
+  nlSubmit.addEventListener('click', async function() {
+    var name  = document.getElementById('nlName').value.trim()
+    var email = document.getElementById('nlEmail').value.trim()
+    if (!email) { showToast('Please enter your email address', 'error'); return }
+    nlSubmit.disabled = true; nlSubmit.textContent = 'Subscribing...'
+    try {
+      var res = await fetch('/api/newsletter/subscribe', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, email: email })
+      })
+      var json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      document.getElementById('newsletterForm').style.display = 'none'
+      document.getElementById('newsletterSuccess').style.display = ''
+    } catch(err) {
+      showToast(err.message || 'Subscription failed', 'error')
+      nlSubmit.disabled = false; nlSubmit.textContent = 'Subscribe'
+    }
+  })
+})()
+</script>
 </body>
 </html>

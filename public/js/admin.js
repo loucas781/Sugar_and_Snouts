@@ -57,6 +57,7 @@ async function initAdmin() {
     setupTabs()
     loadCategories().then(setupProductFilters)
     setupSidebar()
+    restoreSidebarGroups()
     startPolling()
   } catch { window.location.href = '/admin/' }
 }
@@ -101,14 +102,17 @@ function switchTab(name) {
   const btn  = document.querySelector(`[data-tab="${name}"]`)
   if (pane) pane.classList.add('active')
   if (btn)  btn.classList.add('active')
-  const titles = { overview: 'Overview', products: 'Products', orders: 'Orders', messages: 'Messages', users: 'Users', settings: 'Settings' }
+  const titles = { overview: 'Overview', analytics: 'Analytics', products: 'Products', orders: 'Orders', coupons: 'Coupons', messages: 'Messages', newsletter: 'Newsletter', users: 'Users', settings: 'Settings' }
   const titleEl = document.getElementById('topbarTitle')
   if (titleEl) titleEl.textContent = titles[name] || name
 
-  if (name === 'products') loadProducts()
-  if (name === 'orders')   loadOrders()
-  if (name === 'messages') loadMessages()
-  if (name === 'users')    loadUsers()
+  if (name === 'products')   loadProducts()
+  if (name === 'orders')     loadOrders()
+  if (name === 'messages')   loadMessages()
+  if (name === 'users')      loadUsers()
+  if (name === 'analytics')  loadAnalytics(7)
+  if (name === 'coupons')    loadCoupons()
+  if (name === 'newsletter') loadNewsletterSubscribers()
   if (name === 'settings') {
     // Load the currently active settings sub-tab's data
     const active = document.querySelector('#tab-settings [data-stab].active')
@@ -133,10 +137,11 @@ function loadSettingsSubTab(name) {
   if (name === 'general')  { loadSiteSettings(); loadSiteIdentity(); loadMaintenanceSettings() }
   if (name === 'images')   loadSiteImages()
   if (name === 'homepage') { loadHomeExamples(); loadHomepageToggles() }
-  if (name === 'shop')     { loadCategories(); loadOrderSettings(); loadShopContent(); loadDeliverySettings() }
+  if (name === 'shop')     { loadCategories(); loadOrderSettings(); loadShopContent(); loadDeliverySettings(); loadPickupSlotsSettings(); loadStockAgeSettings() }
   if (name === 'contact')  { loadContactSettings(); loadEmailNotifSettings(); loadSmtpSettings() }
   if (name === 'hours')    loadHoursSettings()
   if (name === 'seo')      { loadSeoSettings(); loadAnalyticsSettings() }
+  if (name === 'pages')    { loadTermsContent(); loadPrivacyContent() }
   if (name === 'system')   loadBuildInfo()
   // account tab has no async data to load
 }
@@ -148,15 +153,14 @@ function setupTabs() {
 
 // ── Sidebar toggle (mobile) ───────────────────────────────────────────────────
 function toggleSidebar() {
-  const sidebar  = document.getElementById('adminSidebar')
-  const overlay  = document.getElementById('sidebarOverlay')
-  const isOpen   = sidebar.classList.toggle('open')
-  overlay.style.display = isOpen ? 'block' : 'none'
+  const sidebar = document.getElementById('adminSidebar')
+  const overlay = document.getElementById('sidebarOverlay')
+  const isOpen  = sidebar.classList.toggle('open')
+  overlay?.classList.toggle('open', isOpen)
 }
 function closeSidebar() {
   document.getElementById('adminSidebar')?.classList.remove('open')
-  const ov = document.getElementById('sidebarOverlay')
-  if (ov) ov.style.display = 'none'
+  document.getElementById('sidebarOverlay')?.classList.remove('open')
 }
 function setupSidebar() {
   document.getElementById('sidebarToggle')?.addEventListener('click', toggleSidebar)
@@ -172,12 +176,14 @@ async function doLogout() {
 async function loadStats() {
   try {
     const s = await fetch('/api/stats').then(r => r.json())
-    document.getElementById('statProducts').textContent  = s.totalProducts
-    document.getElementById('statAvailable').textContent = s.availableProducts
-    document.getElementById('statFeatured').textContent  = s.featuredProducts
-    document.getElementById('statOrders').textContent    = s.totalOrders
-    document.getElementById('statPending').textContent   = s.pendingOrders
-    document.getElementById('statMessages').textContent  = s.unreadMessages
+    const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val }
+    setText('statProducts',    s.totalProducts)
+    setText('statAvailable',   s.availableProducts)
+    setText('statOrders',      s.totalOrders)
+    setText('statPending',     s.pendingOrders)
+    setText('statMessages',    s.unreadMessages)
+    setText('statRevenue',     s.totalRevenue != null ? `£${Number(s.totalRevenue).toFixed(2)}` : '—')
+    setText('statSubscribers', s.newsletterSubscribers ?? '—')
   } catch { /* no-op */ }
 }
 
@@ -383,6 +389,8 @@ function openAddProduct() {
   document.getElementById('productModalTitle').textContent = 'Add Product'
   document.getElementById('productForm').reset()
   document.getElementById('pAvailable').checked = true
+  const gallerySection = document.getElementById('gallerySection')
+  if (gallerySection) gallerySection.style.display = 'none'
   populateCategorySelect()
   clearImage()
   openProductModal()
@@ -405,12 +413,22 @@ function openEditProduct(id) {
   document.getElementById('pStockAmount').value   = p.stockAmount != null ? p.stockAmount : ''
   document.getElementById('pQtyLimit').value      = p.quantityLimit || ''
   document.getElementById('pSortOrder').value     = p.sortOrder ?? 0
-  document.getElementById('pAvailable').checked    = p.isAvailable
-  document.getElementById('pFeatured').checked     = p.isFeatured
-  document.getElementById('pNew').checked          = p.isNew
-  document.getElementById('pRecommended').checked  = p.isRecommended
-  document.getElementById('pLimitedTime').checked  = p.isLimitedTime
-  document.getElementById('pOutOfStock').checked   = p.isOutOfStock
+  document.getElementById('pAvailable').checked     = p.isAvailable
+  document.getElementById('pFeatured').checked      = p.isFeatured
+  document.getElementById('pNew').checked           = p.isNew
+  document.getElementById('pRecommended').checked   = p.isRecommended
+  document.getElementById('pLimitedTime').checked   = p.isLimitedTime
+  document.getElementById('pOutOfStock').checked    = p.isOutOfStock
+  document.getElementById('pAgeRestricted').checked = !!p.isAgeRestricted
+  document.getElementById('pLowStockThreshold').value = p.lowStockThreshold != null ? p.lowStockThreshold : ''
+  document.getElementById('pMetaDescription').value   = p.metaDescription || ''
+  document.getElementById('pAvailableFrom').value     = p.availableFrom ? p.availableFrom.replace('Z','').slice(0,16) : ''
+  document.getElementById('pAvailableUntil').value    = p.availableUntil ? p.availableUntil.replace('Z','').slice(0,16) : ''
+
+  // Gallery images
+  const gallerySection = document.getElementById('gallerySection')
+  if (gallerySection) gallerySection.style.display = ''
+  renderGalleryGrid(p.images || [])
 
   populateCategorySelect()
   const catSel = document.getElementById('pCategoryId')
@@ -526,12 +544,17 @@ async function saveProduct() {
     fd.append('stockAmount',   document.getElementById('pStockAmount').value)
     fd.append('quantityLimit', document.getElementById('pQtyLimit').value)
     fd.append('sortOrder',     document.getElementById('pSortOrder').value)
-    fd.append('isAvailable',   document.getElementById('pAvailable').checked)
-    fd.append('isFeatured',    document.getElementById('pFeatured').checked)
-    fd.append('isNew',         document.getElementById('pNew').checked)
-    fd.append('isRecommended', document.getElementById('pRecommended').checked)
-    fd.append('isLimitedTime', document.getElementById('pLimitedTime').checked)
-    fd.append('isOutOfStock',  document.getElementById('pOutOfStock').checked)
+    fd.append('isAvailable',       document.getElementById('pAvailable').checked)
+    fd.append('isFeatured',        document.getElementById('pFeatured').checked)
+    fd.append('isNew',             document.getElementById('pNew').checked)
+    fd.append('isRecommended',     document.getElementById('pRecommended').checked)
+    fd.append('isLimitedTime',     document.getElementById('pLimitedTime').checked)
+    fd.append('isOutOfStock',      document.getElementById('pOutOfStock').checked)
+    fd.append('isAgeRestricted',   document.getElementById('pAgeRestricted').checked)
+    fd.append('lowStockThreshold', document.getElementById('pLowStockThreshold').value)
+    fd.append('metaDescription',   document.getElementById('pMetaDescription').value)
+    fd.append('availableFrom',     document.getElementById('pAvailableFrom').value)
+    fd.append('availableUntil',    document.getElementById('pAvailableUntil').value)
     if (_newImageFile) fd.append('image', _newImageFile)
 
     let res
@@ -560,12 +583,17 @@ async function saveProduct() {
           stockAmount:   document.getElementById('pStockAmount').value !== '' ? parseInt(document.getElementById('pStockAmount').value) : null,
           quantityLimit: document.getElementById('pQtyLimit').value ? parseInt(document.getElementById('pQtyLimit').value) : null,
           sortOrder:     parseInt(document.getElementById('pSortOrder').value) || 0,
-          isAvailable:   document.getElementById('pAvailable').checked,
-          isFeatured:    document.getElementById('pFeatured').checked,
-          isNew:         document.getElementById('pNew').checked,
-          isRecommended: document.getElementById('pRecommended').checked,
-          isLimitedTime: document.getElementById('pLimitedTime').checked,
-          isOutOfStock:  document.getElementById('pOutOfStock').checked,
+          isAvailable:       document.getElementById('pAvailable').checked,
+          isFeatured:        document.getElementById('pFeatured').checked,
+          isNew:             document.getElementById('pNew').checked,
+          isRecommended:     document.getElementById('pRecommended').checked,
+          isLimitedTime:     document.getElementById('pLimitedTime').checked,
+          isOutOfStock:      document.getElementById('pOutOfStock').checked,
+          isAgeRestricted:   document.getElementById('pAgeRestricted').checked,
+          lowStockThreshold: document.getElementById('pLowStockThreshold').value !== '' ? parseInt(document.getElementById('pLowStockThreshold').value) : null,
+          metaDescription:   document.getElementById('pMetaDescription').value || null,
+          availableFrom:     document.getElementById('pAvailableFrom').value || null,
+          availableUntil:    document.getElementById('pAvailableUntil').value || null,
         })
       })
     } else {
@@ -1629,6 +1657,479 @@ async function deleteHomeExample(id, title) {
     loadHomeExamples()
   } catch (err) {
     showToast(err.message, 'error')
+  }
+}
+
+// ── Collapsible Sidebar Groups ────────────────────────────────────────────────
+function toggleSidebarGroup(key) {
+  const el = document.getElementById(`sidebarGroup${key.charAt(0).toUpperCase() + key.slice(1)}`)
+  if (!el) return
+  el.classList.toggle('open')
+  const saved = JSON.parse(localStorage.getItem('sns_sidebar_groups') || '{}')
+  saved[key] = el.classList.contains('open')
+  localStorage.setItem('sns_sidebar_groups', JSON.stringify(saved))
+}
+
+function restoreSidebarGroups() {
+  const saved = JSON.parse(localStorage.getItem('sns_sidebar_groups') || '{}')
+  Object.entries(saved).forEach(([key, isOpen]) => {
+    const el = document.getElementById(`sidebarGroup${key.charAt(0).toUpperCase() + key.slice(1)}`)
+    if (el) el.classList.toggle('open', isOpen)
+  })
+}
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+let _revenueChart = null
+
+async function loadAnalytics(days) {
+  // Update active range button
+  document.querySelectorAll('.admin-date-range-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.days) === days)
+  })
+
+  const spinnerEl = document.getElementById('analyticsSpinner')
+  const wrapEl    = document.getElementById('topProductsWrap')
+  if (spinnerEl) spinnerEl.style.display = ''
+  if (wrapEl)    wrapEl.style.display = 'none'
+
+  try {
+    const data = await fetch(`/api/admin/analytics?days=${days}`).then(r => r.json())
+
+    // Revenue chart
+    const canvas = document.getElementById('revenueChart')
+    if (canvas) {
+      if (_revenueChart) { _revenueChart.destroy(); _revenueChart = null }
+      _revenueChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: (data.dailyRevenue || []).map(d => d.date),
+          datasets: [{
+            label: 'Revenue (£)',
+            data: (data.dailyRevenue || []).map(d => d.revenue),
+            backgroundColor: 'rgba(249,214,138,.7)',
+            borderColor: '#C6A357',
+            borderWidth: 2,
+            borderRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: v => `£${v}` }, grid: { color: '#f0e8e8' } },
+            x: { grid: { display: false } }
+          }
+        }
+      })
+    }
+
+    // Top products table
+    const tbody = document.getElementById('topProductsBody')
+    if (tbody) {
+      tbody.innerHTML = (data.topProducts || []).map((p, i) => `
+        <tr>
+          <td class="td-muted">${i + 1}</td>
+          <td>${p.name}</td>
+          <td>${p.unitsSold}</td>
+          <td>£${Number(p.revenue).toFixed(2)}</td>
+        </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;color:#9ca3af">No data yet</td></tr>'
+      if (wrapEl) wrapEl.style.display = ''
+    }
+  } catch (err) {
+    showToast('Could not load analytics', 'error')
+  } finally {
+    if (spinnerEl) spinnerEl.style.display = 'none'
+  }
+}
+
+// ── Coupons ───────────────────────────────────────────────────────────────────
+async function loadCoupons() {
+  const spinner = document.getElementById('couponsSpinner')
+  const wrap    = document.getElementById('couponsTableWrap')
+  const empty   = document.getElementById('couponsEmpty')
+  if (spinner) spinner.style.display = ''
+  if (wrap)    wrap.style.display = 'none'
+  if (empty)   empty.style.display = 'none'
+
+  try {
+    const coupons = await fetch('/api/admin/coupons').then(r => r.json())
+    const tbody = document.getElementById('couponsBody')
+    if (!tbody) return
+
+    if (!coupons.length) {
+      if (empty) empty.style.display = ''
+      return
+    }
+
+    tbody.innerHTML = coupons.map(c => {
+      const typeLabel = c.type === 'percentage' ? `${c.value}%` : `£${Number(c.value).toFixed(2)}`
+      const expires   = c.expires_at ? new Date(c.expires_at).toLocaleDateString('en-GB') : '—'
+      const maxUses   = c.max_uses   ? c.max_uses : '∞'
+      return `<tr>
+        <td><strong style="font-family:monospace">${c.code}</strong></td>
+        <td><span class="coupon-type ${c.type}">${c.type}</span></td>
+        <td>${typeLabel}</td>
+        <td>${c.uses_count} / ${maxUses}</td>
+        <td>${expires}</td>
+        <td><span class="status-badge ${c.is_active ? 'status-active' : 'status-inactive'}">${c.is_active ? 'Active' : 'Inactive'}</span></td>
+        <td class="td-actions">
+          <button class="btn-admin-icon" title="Edit" onclick="openEditCoupon('${c.id}')">✏️</button>
+          <button class="btn-admin-icon danger" title="Delete" onclick="deleteCoupon('${c.id}','${c.code}')">🗑️</button>
+        </td>
+      </tr>`
+    }).join('')
+    if (wrap) wrap.style.display = ''
+  } catch { showToast('Could not load coupons', 'error') }
+  finally { if (spinner) spinner.style.display = 'none' }
+}
+
+let _editingCouponId = null
+let _allCoupons = []
+
+async function openAddCoupon() {
+  _editingCouponId = null
+  document.getElementById('couponModalTitle').textContent = 'Add Coupon'
+  document.getElementById('couponForm').reset()
+  document.getElementById('cActive').checked = true
+  document.getElementById('couponAlert').style.display = 'none'
+  document.getElementById('couponModalOverlay').classList.add('open')
+}
+
+async function openEditCoupon(id) {
+  try {
+    const coupons = await fetch('/api/admin/coupons').then(r => r.json())
+    const c = coupons.find(x => x.id === id)
+    if (!c) return
+    _editingCouponId = id
+    document.getElementById('couponModalTitle').textContent = 'Edit Coupon'
+    document.getElementById('cCode').value       = c.code
+    document.getElementById('cType').value       = c.type
+    document.getElementById('cValue').value      = c.value
+    document.getElementById('cMaxUses').value    = c.max_uses || ''
+    document.getElementById('cExpiresAt').value  = c.expires_at ? c.expires_at.replace('Z','').slice(0,16) : ''
+    document.getElementById('cActive').checked   = !!c.is_active
+    document.getElementById('couponAlert').style.display = 'none'
+    document.getElementById('couponModalOverlay').classList.add('open')
+  } catch { showToast('Could not load coupon', 'error') }
+}
+
+function closeCouponModal() {
+  document.getElementById('couponModalOverlay').classList.remove('open')
+  _editingCouponId = null
+}
+
+async function saveCoupon() {
+  const alertEl = document.getElementById('couponAlert')
+  alertEl.style.display = 'none'
+  const body = {
+    code:     document.getElementById('cCode').value.trim().toUpperCase(),
+    type:     document.getElementById('cType').value,
+    value:    parseFloat(document.getElementById('cValue').value),
+    maxUses:  document.getElementById('cMaxUses').value ? parseInt(document.getElementById('cMaxUses').value) : null,
+    expiresAt: document.getElementById('cExpiresAt').value || null,
+    isActive: document.getElementById('cActive').checked,
+  }
+  try {
+    const url = _editingCouponId ? `/api/admin/coupons/${_editingCouponId}` : '/api/admin/coupons'
+    const method = _editingCouponId ? 'PATCH' : 'POST'
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    closeCouponModal()
+    loadCoupons()
+    showToast(_editingCouponId ? 'Coupon updated!' : 'Coupon created!', 'success')
+  } catch (err) {
+    alertEl.textContent = err.message
+    alertEl.style.display = ''
+    alertEl.className = 'admin-alert error'
+  }
+}
+
+async function deleteCoupon(id, code) {
+  if (!confirm(`Delete coupon "${code}"?`)) return
+  try {
+    const res = await fetch(`/api/admin/coupons/${id}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error('Delete failed')
+    loadCoupons()
+    showToast('Coupon deleted', 'success')
+  } catch (err) { showToast(err.message, 'error') }
+}
+
+// ── Newsletter ─────────────────────────────────────────────────────────────────
+async function loadNewsletterSubscribers() {
+  const spinner = document.getElementById('newsletterSpinner')
+  const wrap    = document.getElementById('newsletterTableWrap')
+  const empty   = document.getElementById('newsletterEmpty')
+  if (spinner) spinner.style.display = ''
+  if (wrap)    wrap.style.display = 'none'
+  if (empty)   empty.style.display = 'none'
+
+  try {
+    const subs = await fetch('/api/admin/newsletter').then(r => r.json())
+    const count = document.getElementById('subscriberCount')
+    if (count) count.textContent = subs.length
+
+    if (!subs.length) { if (empty) empty.style.display = ''; return }
+
+    const tbody = document.getElementById('newsletterBody')
+    if (tbody) {
+      tbody.innerHTML = subs.map(s => `<tr>
+        <td>${s.email}</td>
+        <td>${s.name || '—'}</td>
+        <td class="td-muted">${new Date(s.optin_at).toLocaleDateString('en-GB')}</td>
+        <td><span class="status-badge ${s.is_active ? 'status-active' : 'status-inactive'}">${s.is_active ? 'Active' : 'Inactive'}</span></td>
+        <td class="td-actions">
+          <button class="btn-admin-icon danger" onclick="deleteSubscriber('${s.id}','${s.email}')">🗑️</button>
+        </td>
+      </tr>`).join('')
+    }
+    if (wrap) wrap.style.display = ''
+  } catch { showToast('Could not load subscribers', 'error') }
+  finally { if (spinner) spinner.style.display = 'none' }
+}
+
+async function deleteSubscriber(id, email) {
+  if (!confirm(`Remove subscriber "${email}"?`)) return
+  try {
+    const res = await fetch(`/api/admin/newsletter/${id}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error('Delete failed')
+    loadNewsletterSubscribers()
+    showToast('Subscriber removed', 'success')
+  } catch (err) { showToast(err.message, 'error') }
+}
+
+function exportNewsletterCSV() {
+  const tbody = document.getElementById('newsletterBody')
+  if (!tbody) return
+  const rows = [['Email','Name','Joined','Status']]
+  tbody.querySelectorAll('tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td')
+    if (cells.length >= 4) {
+      rows.push([cells[0].textContent, cells[1].textContent, cells[2].textContent, cells[3].textContent.trim()])
+    }
+  })
+  const csv = rows.map(r => r.map(c => `"${c.replace(/"/g,'""')}"`).join(',')).join('\n')
+  const a = document.createElement('a')
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+  a.download = `newsletter-subscribers-${new Date().toISOString().slice(0,10)}.csv`
+  a.click()
+}
+
+// ── Gallery images ────────────────────────────────────────────────────────────
+function renderGalleryGrid(images) {
+  const grid = document.getElementById('galleryGrid')
+  if (!grid) return
+  grid.innerHTML = images.map(img => `
+    <div class="admin-img-thumb" id="gthumb-${img.id}">
+      <img src="${img.imagePath}" alt="Gallery image">
+      <button class="admin-img-thumb__remove" onclick="removeGalleryImage('${img.id}')">✕</button>
+    </div>`).join('')
+}
+
+async function uploadGalleryImage(input) {
+  if (!input.files[0] || !_editingProductId) return
+  const fd = new FormData()
+  fd.append('image', input.files[0])
+  try {
+    const res  = await fetch(`/api/products/admin/${_editingProductId}/images`, { method: 'POST', body: fd })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Upload failed')
+    // Reload product to get updated images array
+    const products = await fetch('/api/products/admin/all').then(r => r.json())
+    const p = products.find(x => x.id === _editingProductId)
+    if (p) renderGalleryGrid(p.images || [])
+    showToast('Image added', 'success')
+  } catch (err) { showToast(err.message, 'error') }
+  input.value = ''
+}
+
+async function removeGalleryImage(imgId) {
+  if (!_editingProductId) return
+  try {
+    const res = await fetch(`/api/products/admin/${_editingProductId}/images/${imgId}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error('Remove failed')
+    document.getElementById(`gthumb-${imgId}`)?.remove()
+    showToast('Image removed', 'success')
+  } catch (err) { showToast(err.message, 'error') }
+}
+
+// ── Pickup Slots Settings ─────────────────────────────────────────────────────
+let _pickupSlots = []
+
+async function loadPickupSlotsSettings() {
+  try {
+    const [slotsRes, settingsRes] = await Promise.all([
+      fetch('/api/admin/pickup-slots').then(r => r.json()),
+      fetch('/api/settings').then(r => r.json())
+    ])
+    _pickupSlots = slotsRes
+    document.getElementById('settingPickupSlotsEnabled').checked = settingsRes.pickup_slots_enabled === '1'
+    renderPickupSlotsList()
+  } catch { /* no-op */ }
+}
+
+function renderPickupSlotsList() {
+  const el = document.getElementById('pickupSlotsList')
+  if (!el) return
+  if (!_pickupSlots.length) { el.innerHTML = '<p style="color:#9ca3af;font-size:.85rem">No slots yet.</p>'; return }
+  el.innerHTML = `<ul class="slot-list">${_pickupSlots.map(s => `
+    <li>
+      <label class="admin-toggle" style="font-size:.88rem;cursor:pointer">
+        <input type="checkbox" ${s.is_active ? 'checked' : ''} onchange="togglePickupSlot('${s.id}',this.checked)">
+        <span class="admin-toggle__track"></span>
+        ${s.label}
+      </label>
+      <button class="btn-admin-icon danger" onclick="deletePickupSlot('${s.id}')">🗑️</button>
+    </li>`).join('')}</ul>`
+}
+
+async function addPickupSlot() {
+  const input = document.getElementById('newPickupSlot')
+  const label = input.value.trim()
+  if (!label) return
+  try {
+    const res = await fetch('/api/admin/pickup-slots', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label })
+    })
+    if (!res.ok) throw new Error('Add failed')
+    input.value = ''
+    await loadPickupSlotsSettings()
+    showToast('Slot added', 'success')
+  } catch (err) { showToast(err.message, 'error') }
+}
+
+async function togglePickupSlot(id, isActive) {
+  try {
+    await fetch(`/api/admin/pickup-slots/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive })
+    })
+  } catch { showToast('Update failed', 'error') }
+}
+
+async function deletePickupSlot(id) {
+  if (!confirm('Delete this pickup slot?')) return
+  try {
+    const res = await fetch(`/api/admin/pickup-slots/${id}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error('Delete failed')
+    await loadPickupSlotsSettings()
+    showToast('Slot deleted', 'success')
+  } catch (err) { showToast(err.message, 'error') }
+}
+
+async function savePickupSlotSettings() {
+  const alertEl = document.getElementById('pickupSlotsAlert')
+  alertEl.style.display = 'none'
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pickup_slots_enabled: document.getElementById('settingPickupSlotsEnabled').checked ? '1' : '0' })
+    })
+    if (!res.ok) throw new Error('Save failed')
+    alertEl.textContent = 'Saved!'
+    alertEl.className = 'admin-alert success'
+    alertEl.style.display = ''
+    setTimeout(() => alertEl.style.display = 'none', 2000)
+  } catch (err) {
+    alertEl.textContent = err.message
+    alertEl.className = 'admin-alert error'
+    alertEl.style.display = ''
+  }
+}
+
+// ── Stock & Age Settings ──────────────────────────────────────────────────────
+async function loadStockAgeSettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    document.getElementById('settingLowStockThreshold').value = s.low_stock_threshold || ''
+    document.getElementById('settingCookieConsentEnabled').checked = s.cookie_consent_enabled !== '0'
+    document.getElementById('settingAgeGateText').value = s.age_gate_text || ''
+  } catch { /* no-op */ }
+}
+
+async function saveStockAgeSettings() {
+  const alertEl = document.getElementById('stockSettingsAlert')
+  alertEl.style.display = 'none'
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        low_stock_threshold:    document.getElementById('settingLowStockThreshold').value || '5',
+        cookie_consent_enabled: document.getElementById('settingCookieConsentEnabled').checked ? '1' : '0',
+        age_gate_text:          document.getElementById('settingAgeGateText').value,
+      })
+    })
+    if (!res.ok) throw new Error('Save failed')
+    alertEl.textContent = 'Saved!'
+    alertEl.className = 'admin-alert success'
+    alertEl.style.display = ''
+    setTimeout(() => alertEl.style.display = 'none', 2000)
+  } catch (err) {
+    alertEl.textContent = err.message
+    alertEl.className = 'admin-alert error'
+    alertEl.style.display = ''
+  }
+}
+
+// ── Pages Content (Terms / Privacy) ───────────────────────────────────────────
+async function loadTermsContent() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    document.getElementById('settingTermsContent').value = s.terms_content || ''
+  } catch { /* no-op */ }
+}
+
+async function saveTermsContent() {
+  const alertEl = document.getElementById('termsContentAlert')
+  alertEl.style.display = 'none'
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ terms_content: document.getElementById('settingTermsContent').value })
+    })
+    if (!res.ok) throw new Error('Save failed')
+    alertEl.textContent = 'Terms saved!'
+    alertEl.className = 'admin-alert success'
+    alertEl.style.display = ''
+    setTimeout(() => alertEl.style.display = 'none', 2000)
+  } catch (err) {
+    alertEl.textContent = err.message
+    alertEl.className = 'admin-alert error'
+    alertEl.style.display = ''
+  }
+}
+
+async function loadPrivacyContent() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    document.getElementById('settingPrivacyContent').value = s.privacy_content || ''
+  } catch { /* no-op */ }
+}
+
+async function savePrivacyContent() {
+  const alertEl = document.getElementById('privacyContentAlert')
+  alertEl.style.display = 'none'
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ privacy_content: document.getElementById('settingPrivacyContent').value })
+    })
+    if (!res.ok) throw new Error('Save failed')
+    alertEl.textContent = 'Privacy policy saved!'
+    alertEl.className = 'admin-alert success'
+    alertEl.style.display = ''
+    setTimeout(() => alertEl.style.display = 'none', 2000)
+  } catch (err) {
+    alertEl.textContent = err.message
+    alertEl.className = 'admin-alert error'
+    alertEl.style.display = ''
   }
 }
 

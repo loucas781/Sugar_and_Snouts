@@ -106,16 +106,11 @@ async function applySiteImages() {
       }
     }
 
-    // Google Analytics injection
-    if (s.google_analytics_id && !document.getElementById('ga-script')) {
-      const script = document.createElement('script')
-      script.id  = 'ga-script'
-      script.src = `https://www.googletagmanager.com/gtag/js?id=${s.google_analytics_id}`
-      script.async = true
-      document.head.appendChild(script)
-      const inline = document.createElement('script')
-      inline.textContent = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${s.google_analytics_id}')`
-      document.head.appendChild(inline)
+    // Google Analytics — gated behind cookie consent
+    if (s.google_analytics_id && s.cookie_consent_enabled !== '0') {
+      if (typeof initCookieConsent === 'function') initCookieConsent(s.google_analytics_id)
+    } else if (s.google_analytics_id) {
+      if (typeof loadAnalytics === 'function') loadAnalytics(s.google_analytics_id)
     }
 
   } catch { /* no-op */ }

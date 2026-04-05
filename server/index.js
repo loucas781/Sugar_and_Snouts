@@ -176,24 +176,82 @@ app.get('/api/stats', require('./middleware/auth').requireAuth, (req, res) => {
   const orders      = db.prepare('SELECT COUNT(*) as c FROM orders').get()
   const pending     = db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'pending'").get()
   const messages    = db.prepare('SELECT COUNT(*) as c FROM contact_messages WHERE is_read = 0').get()
+  const revenue     = db.prepare("SELECT COALESCE(SUM(total),0) as r FROM orders WHERE status != 'cancelled'").get()
+  const subscribers = db.prepare('SELECT COUNT(*) as c FROM newsletter_subscribers WHERE is_active = 1').get()
   res.json({
-    totalProducts: products.c,
+    totalProducts:     products.c,
     availableProducts: available.c,
-    featuredProducts: featured.c,
-    totalOrders: orders.c,
-    pendingOrders: pending.c,
-    unreadMessages: messages.c,
+    featuredProducts:  featured.c,
+    totalOrders:       orders.c,
+    pendingOrders:     pending.c,
+    unreadMessages:    messages.c,
+    totalRevenue:      revenue.r,
+    newsletterSubscribers: subscribers.c,
   })
 })
 
+// ─── Analytics (admin) ───────────────────────────────────────────────────────
+app.get('/api/admin/analytics', require('./middleware/auth').requireAuth, (req, res) => {
+  const db = require('./db/connection')
+  const days = Math.min(parseInt(req.query.days || '30'), 365)
+
+  const daily = db.prepare(`
+    SELECT date(created_at) as day,
+           COUNT(*) as orders,
+           COALESCE(SUM(total),0) as revenue
+    FROM orders
+    WHERE status != 'cancelled'
+      AND created_at >= datetime('now', '-' || ? || ' days')
+    GROUP BY day
+    ORDER BY day ASC
+  `).all(days)
+
+  const topProducts = db.prepare(`
+    SELECT json_extract(item.value, '$.productName') as name,
+           SUM(CAST(json_extract(item.value, '$.quantity') AS INTEGER)) as qty,
+           SUM(CAST(json_extract(item.value, '$.lineTotal') AS REAL)) as revenue
+    FROM orders, json_each(orders.items) as item
+    WHERE orders.status != 'cancelled'
+      AND orders.created_at >= datetime('now', '-' || ? || ' days')
+    GROUP BY name
+    ORDER BY qty DESC
+    LIMIT 10
+  `).all(days)
+
+  res.json({ daily, topProducts })
+})
+
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/auth',          require('./routes/auth'))
-app.use('/api/products',      require('./routes/products'))
-app.use('/api/orders',        require('./routes/orders'))
-app.use('/api/contact',       require('./routes/contact'))
-app.use('/api/admin/users',   require('./routes/users'))
-app.use('/api/settings',      require('./routes/settings'))
-app.use('/api/home-examples', require('./routes/examples'))
+app.use('/api/auth',           require('./routes/auth'))
+app.use('/api/products',       require('./routes/products'))
+app.use('/api/orders',         require('./routes/orders'))
+app.use('/api/contact',        require('./routes/contact'))
+app.use('/api/admin/users',    require('./routes/users'))
+app.use('/api/settings',       require('./routes/settings'))
+app.use('/api/home-examples',  require('./routes/examples'))
+app.use('/api/coupons',        require('./routes/coupons'))
+app.use('/api/newsletter',     require('./routes/newsletter'))
+app.use('/api/pickup-slots',   require('./routes/pickup_slots'))
+
+// ─── Sitemap ──────────────────────────────────────────────────────────────────
+app.get('/sitemap.xml', (req, res) => {
+  const db = require('./db/connection')
+  const baseUrl = process.env.SITE_URL || `${req.protocol}://${req.get('host')}`
+  const products = db.prepare(`
+    SELECT id FROM products WHERE is_available = 1
+    AND (available_from IS NULL OR available_from <= datetime('now'))
+    AND (available_until IS NULL OR available_until >= datetime('now'))
+  `).all()
+
+  const staticPages = ['', '/shop', '/contact', '/terms', '/privacy', '/order-status']
+  const urls = [
+    ...staticPages.map(p => `  <url><loc>${baseUrl}${p}</loc><changefreq>weekly</changefreq></url>`),
+    ...products.map(p => `  <url><loc>${baseUrl}/shop#product-${p.id}</loc><changefreq>weekly</changefreq></url>`),
+  ].join('\n')
+
+  res.set('Content-Type', 'application/xml')
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`)
+})
 
 // ─── Page routes ──────────────────────────────────────────────────────────────
 const pub = (file) => path.join(__dirname, '../public', file)
@@ -202,6 +260,9 @@ app.get('/shop',             (req, res) => res.sendFile(pub('shop.html')))
 app.get('/shop.html',        (req, res) => res.sendFile(pub('shop.html')))
 app.get('/contact',          (req, res) => res.sendFile(pub('contact.html')))
 app.get('/contact.html',     (req, res) => res.sendFile(pub('contact.html')))
+app.get('/order-status',     (req, res) => res.sendFile(pub('order-status.html')))
+app.get('/terms',            (req, res) => res.sendFile(pub('terms.html')))
+app.get('/privacy',          (req, res) => res.sendFile(pub('privacy.html')))
 app.get('/admin/setup', (req, res) => { res.set('X-Robots-Tag', 'noindex, nofollow'); res.sendFile(pub('admin/setup.html')) })
 app.get('/admin', (req, res) => {
   if (!req.originalUrl.startsWith('/admin/')) return res.redirect('/admin/')

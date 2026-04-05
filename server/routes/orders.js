@@ -3,8 +3,35 @@ const express = require('express')
 const { v4: uuidv4 } = require('uuid')
 const db      = require('../db/connection')
 const { requireAuth } = require('../middleware/auth')
+const { sendOrderConfirmation, sendStatusUpdate, sendNewOrderNotification } = require('../utils/email')
 
 const router = express.Router()
+
+// GET /api/orders/track — public order status lookup
+router.get('/track', (req, res) => {
+  const { id, email } = req.query
+  if (!id || !email) return res.status(400).json({ error: 'Order ID and email are required' })
+
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(id)
+  if (!order || order.customer_email.toLowerCase() !== email.toLowerCase().trim()) {
+    return res.status(404).json({ error: 'Order not found. Please check your order ID and email.' })
+  }
+
+  res.json({
+    id:           order.id,
+    status:       order.status,
+    customerName: order.customer_name,
+    items:        JSON.parse(order.items),
+    total:        order.total,
+    discountAmount: order.discount_amount || 0,
+    couponCode:   order.coupon_code || null,
+    pickupSlot:   order.pickup_slot || null,
+    orderDate:    order.order_date  || null,
+    notes:        order.notes || null,
+    createdAt:    order.created_at,
+    updatedAt:    order.updated_at,
+  })
+})
 
 // POST /api/orders — submit order inquiry (public)
 router.post('/', (req, res) => {
@@ -24,9 +51,34 @@ router.post('/', (req, res) => {
     }
   }
 
-  const { customerName, customerEmail, customerPhone, items, notes } = req.body
+  const { customerName, customerEmail, customerPhone, items, notes, couponCode, pickupSlot, orderDate } = req.body
   if (!customerName || !customerEmail || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Name, email and at least one item are required' })
+  }
+
+  // Validate pre-order date
+  if (orderDate) {
+    const maxDaysAhead = parseInt(db.prepare("SELECT value FROM app_preferences WHERE key = 'order_max_days_ahead'").get()?.value || '0')
+    const requested = new Date(orderDate)
+    const today = new Date(); today.setHours(0,0,0,0)
+    if (requested < today) {
+      return res.status(400).json({ error: 'Order date cannot be in the past' })
+    }
+    if (maxDaysAhead > 0) {
+      const maxDate = new Date(today); maxDate.setDate(maxDate.getDate() + maxDaysAhead)
+      if (requested > maxDate) {
+        return res.status(400).json({ error: `Orders can only be placed up to ${maxDaysAhead} days in advance` })
+      }
+    }
+  }
+
+  // Validate pickup slot
+  if (pickupSlot) {
+    const slotsEnabled = db.prepare("SELECT value FROM app_preferences WHERE key = 'pickup_slots_enabled'").get()?.value
+    if (slotsEnabled === '1') {
+      const slot = db.prepare('SELECT id FROM pickup_slots WHERE id = ? AND is_active = 1').get(pickupSlot)
+      if (!slot) return res.status(400).json({ error: 'Invalid pickup slot selected' })
+    }
   }
 
   // Validate each item against DB and check quantity limits
@@ -58,7 +110,6 @@ router.post('/', (req, res) => {
       })
     }
 
-    // Use offer price if active
     const offerActive = product.offer_price && product.offer_expires_at
       ? new Date(product.offer_expires_at) > new Date()
       : product.offer_price && !product.offer_expires_at
@@ -78,21 +129,49 @@ router.post('/', (req, res) => {
   const minOrderPref = db.prepare("SELECT value FROM app_preferences WHERE key = 'minimum_order_value'").get()
   const minOrderValue = minOrderPref?.value ? parseFloat(minOrderPref.value) : 0
   if (minOrderValue > 0 && total < minOrderValue) {
-    return res.status(400).json({ error: `Minimum order value is £${minOrderValue.toFixed(2)}. Your order total is £${total.toFixed(2)}.` })
+    return res.status(400).json({ error: `Minimum order value is \u00a3${minOrderValue.toFixed(2)}. Your order total is \u00a3${total.toFixed(2)}.` })
   }
+
+  // Validate and apply coupon
+  let discountAmount = 0
+  let appliedCouponCode = null
+  if (couponCode) {
+    const code = couponCode.trim().toUpperCase()
+    const coupon = db.prepare('SELECT * FROM coupons WHERE UPPER(code) = ? AND is_active = 1').get(code)
+    if (!coupon) return res.status(400).json({ error: 'Invalid or inactive coupon code' })
+    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+      return res.status(400).json({ error: 'This coupon has expired' })
+    }
+    if (coupon.max_uses != null && coupon.uses_count >= coupon.max_uses) {
+      return res.status(400).json({ error: 'This coupon has reached its usage limit' })
+    }
+
+    discountAmount = coupon.type === 'percentage'
+      ? Math.round(total * (coupon.value / 100) * 100) / 100
+      : Math.min(coupon.value, total)
+
+    appliedCouponCode = coupon.code
+    db.prepare('UPDATE coupons SET uses_count = uses_count + 1 WHERE id = ?').run(coupon.id)
+  }
+
+  const finalTotal = Math.max(0, Math.round((total - discountAmount) * 100) / 100)
 
   const id = uuidv4()
   db.prepare(`
-    INSERT INTO orders (id, customer_name, customer_email, customer_phone, items, total, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO orders (id, customer_name, customer_email, customer_phone, items, total, notes, coupon_code, discount_amount, pickup_slot, order_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     customerName.trim(),
     customerEmail.toLowerCase().trim(),
     customerPhone?.trim() || null,
     JSON.stringify(validatedItems),
-    Math.round(total * 100) / 100,
-    notes?.trim() || null
+    finalTotal,
+    notes?.trim() || null,
+    appliedCouponCode,
+    discountAmount,
+    pickupSlot || null,
+    orderDate || null
   )
 
   // Deduct stock for products with stock tracking enabled
@@ -105,10 +184,16 @@ router.post('/', (req, res) => {
     }
   }
 
-  res.status(201).json({ ok: true, orderId: id, total: Math.round(total * 100) / 100 })
+  const savedOrder = db.prepare('SELECT * FROM orders WHERE id = ?').get(id)
+
+  // Send emails (non-blocking)
+  sendOrderConfirmation(savedOrder).catch(e => console.error('Confirmation email failed:', e.message))
+  sendNewOrderNotification(savedOrder).catch(e => console.error('Notification email failed:', e.message))
+
+  res.status(201).json({ ok: true, orderId: id, total: finalTotal, discountAmount })
 })
 
-// GET /api/admin/orders — list orders (admin)
+// GET /api/orders/admin — list orders (admin)
 router.get('/admin', requireAuth, (req, res) => {
   const { status, limit = 50, offset = 0 } = req.query
   let sql = 'SELECT * FROM orders'
@@ -127,14 +212,14 @@ router.get('/admin', requireAuth, (req, res) => {
   res.json({ orders, total: total.c })
 })
 
-// GET /api/admin/orders/:id — single order (admin)
+// GET /api/orders/admin/:id — single order (admin)
 router.get('/admin/:id', requireAuth, (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id)
   if (!order) return res.status(404).json({ error: 'Order not found' })
   res.json({ ...order, items: JSON.parse(order.items) })
 })
 
-// PATCH /api/admin/orders/:id — update order status / admin notes
+// PATCH /api/orders/admin/:id — update order status / admin notes
 router.patch('/admin/:id', requireAuth, (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id)
   if (!order) return res.status(404).json({ error: 'Order not found' })
@@ -167,6 +252,12 @@ router.patch('/admin/:id', requireAuth, (req, res) => {
   }
 
   const updated = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id)
+
+  // Send status update email to customer (non-blocking)
+  if (status && status !== order.status) {
+    sendStatusUpdate(updated, status).catch(e => console.error('Status email failed:', e.message))
+  }
+
   res.json({ ...updated, items: JSON.parse(updated.items) })
 })
 
