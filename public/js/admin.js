@@ -1497,11 +1497,11 @@ async function loadSiteImages() {
     const slots = await fetch('/api/settings/images').then(r => r.json())
     grid.innerHTML = slots.map(slot => `
       <div class="site-image-slot" id="imgSlot_${slot.key}">
-        <div style="font-size:.8rem;font-weight:600;color:#374151;margin-bottom:.5rem">${slot.label}</div>
+        <div class="site-img-slot__label">${slot.label}</div>
         <div class="site-img-preview-wrap">
           ${slot.currentUrl
             ? `<img src="${slot.currentUrl}?t=${Date.now()}" class="site-img-preview" alt="${slot.label}">`
-            : `<div class="site-img-placeholder">🖼️<div style="font-size:.7rem;margin-top:.3rem;color:#9ca3af">Default image</div></div>`
+            : `<div class="site-img-placeholder">🖼️<div style="font-size:.7rem;margin-top:.3rem">Default image</div></div>`
           }
         </div>
         <div style="display:flex;gap:.4rem;margin-top:.5rem">

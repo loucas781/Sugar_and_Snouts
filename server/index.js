@@ -84,8 +84,16 @@ app.use('/api/contact', rateLimit({
 
 // ─── Maintenance mode ─────────────────────────────────────────────────────────
 app.use((req, res, next) => {
-  // Allow admin pages, API auth, and health check through unconditionally
-  if (req.path.startsWith('/admin') || req.path.startsWith('/api/auth') || req.path === '/api/health') {
+  // Allow admin pages, API auth, health check, and static assets through unconditionally
+  if (
+    req.path.startsWith('/admin') ||
+    req.path.startsWith('/api/auth') ||
+    req.path === '/api/health' ||
+    req.path.startsWith('/css/') ||
+    req.path.startsWith('/js/') ||
+    req.path.startsWith('/img/') ||
+    req.path === '/favicon.jpg'
+  ) {
     return next()
   }
   try {
