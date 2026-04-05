@@ -1660,6 +1660,16 @@ body.admin-body[data-admin-theme="oled"] .admin-settings-tab:hover { color: var(
 body.admin-body[data-admin-theme="dark"] .admin-settings-tab.active,
 body.admin-body[data-admin-theme="oled"] .admin-settings-tab.active { color: var(--adm-text); }
 
+/* Admin sub-tab pill buttons (settings page) */
+body.admin-body[data-admin-theme="dark"] .admin-tabs,
+body.admin-body[data-admin-theme="oled"] .admin-tabs { border-bottom-color: var(--adm-bdr); }
+body.admin-body[data-admin-theme="dark"] .admin-tab,
+body.admin-body[data-admin-theme="oled"] .admin-tab { color: var(--adm-muted); border-color: var(--adm-bdr); }
+body.admin-body[data-admin-theme="dark"] .admin-tab:hover,
+body.admin-body[data-admin-theme="oled"] .admin-tab:hover { color: var(--adm-text); border-color: var(--adm-text2); background: var(--adm-hover); }
+body.admin-body[data-admin-theme="dark"] .admin-tab.active,
+body.admin-body[data-admin-theme="oled"] .admin-tab.active { background: var(--gold); color: var(--dark); border-color: var(--gold-dark); }
+
 /* Setting rows */
 body.admin-body[data-admin-theme="dark"] .admin-setting-row,
 body.admin-body[data-admin-theme="oled"] .admin-setting-row { border-bottom-color: var(--adm-bdr); }
