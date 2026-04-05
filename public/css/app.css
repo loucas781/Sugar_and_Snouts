@@ -854,10 +854,6 @@ h1, h2, h3, h4 { font-family: 'Pacifico', cursive; font-weight: 400; }
   padding: 1.75rem;
 }
 
-/* Tabs */
-.admin-tab { display: none; }
-.admin-tab.active { display: block; }
-
 /* Tab header */
 .admin-tab-header {
   display: flex;

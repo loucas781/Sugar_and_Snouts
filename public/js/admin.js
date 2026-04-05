@@ -376,8 +376,8 @@ function productCardHTML(p) {
         ${p.quantityLimit ? `<div style="font-size:.75rem;color:#9ca3af;margin-bottom:.4rem">Limit: ${p.quantityLimit}/order</div>` : ''}
         ${tags ? `<div class="admin-product-card__tags">${tags}</div>` : ''}
         <div class="admin-product-card__actions">
-          <button class="btn-admin-sm btn-edit" data-edit="${p.id}">✏️ Edit</button>
-          <button class="btn-admin-sm btn-delete" data-delete="${p.id}" data-name="${p.name}">🗑️</button>
+          <button class="btn-secondary-admin btn-admin-sm btn-edit" data-edit="${p.id}">✏️ Edit</button>
+          <button class="btn-delete-admin btn-admin-sm btn-delete" data-delete="${p.id}" data-name="${p.name}">🗑️</button>
         </div>
       </div>
     </div>`
@@ -1865,9 +1865,10 @@ async function loadNewsletterSubscribers() {
   if (empty)   empty.style.display = 'none'
 
   try {
-    const subs = await fetch('/api/admin/newsletter').then(r => r.json())
+    const data = await fetch('/api/newsletter/admin').then(r => r.json())
+    const subs = data.subscribers || []
     const count = document.getElementById('subscriberCount')
-    if (count) count.textContent = subs.length
+    if (count) count.textContent = subs.filter(s => s.is_active).length
 
     if (!subs.length) { if (empty) empty.style.display = ''; return }
 
@@ -1891,7 +1892,7 @@ async function loadNewsletterSubscribers() {
 async function deleteSubscriber(id, email) {
   if (!confirm(`Remove subscriber "${email}"?`)) return
   try {
-    const res = await fetch(`/api/admin/newsletter/${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/newsletter/admin/${id}`, { method: 'DELETE' })
     if (!res.ok) throw new Error('Delete failed')
     loadNewsletterSubscribers()
     showToast('Subscriber removed', 'success')
@@ -1913,6 +1914,43 @@ function exportNewsletterCSV() {
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
   a.download = `newsletter-subscribers-${new Date().toISOString().slice(0,10)}.csv`
   a.click()
+}
+
+async function sendNewsletter() {
+  const subject = (document.getElementById('nlSubject')?.value || '').trim()
+  const html    = (document.getElementById('nlBody')?.value || '').trim()
+  const alert   = document.getElementById('newsletterSendAlert')
+  const btn     = document.getElementById('nlSendBtn')
+
+  if (!subject || !html) {
+    if (alert) { alert.style.display = ''; alert.style.background = '#fee2e2'; alert.style.color = '#991b1b'; alert.textContent = 'Subject and message are required.' }
+    return
+  }
+
+  if (!confirm(`Send this newsletter to all active subscribers?`)) return
+
+  if (btn) btn.disabled = true
+  try {
+    const res  = await fetch('/api/newsletter/admin/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, html }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Send failed')
+    if (alert) {
+      alert.style.display = ''
+      alert.style.background = '#d1fae5'
+      alert.style.color = '#065f46'
+      alert.textContent = `Sent to ${data.sent} subscriber${data.sent !== 1 ? 's' : ''}${data.failed ? ` (${data.failed} failed)` : ''}.`
+    }
+    document.getElementById('nlSubject').value = ''
+    document.getElementById('nlBody').value = ''
+  } catch (err) {
+    if (alert) { alert.style.display = ''; alert.style.background = '#fee2e2'; alert.style.color = '#991b1b'; alert.textContent = err.message }
+  } finally {
+    if (btn) btn.disabled = false
+  }
 }
 
 // ── Gallery images ────────────────────────────────────────────────────────────

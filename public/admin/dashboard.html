@@ -262,16 +262,34 @@
 
       <!-- ── Newsletter Tab ──────────────────────────────────────────────── -->
       <div class="admin-tab-pane" id="tab-newsletter">
+        <div class="admin-panel" style="margin-bottom:1.5rem">
+          <div class="admin-panel__header">
+            <h2>Send Newsletter</h2>
+          </div>
+          <div class="admin-panel__body">
+            <div id="newsletterSendAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+            <div class="admin-form-group">
+              <label class="admin-label">Subject</label>
+              <input type="text" id="nlSubject" class="admin-input-field" placeholder="e.g. New treats available this weekend!">
+            </div>
+            <div class="admin-form-group">
+              <label class="admin-label">Message (HTML supported)</label>
+              <textarea id="nlBody" class="admin-textarea-field" rows="6" placeholder="Write your newsletter message here. You can use basic HTML for formatting."></textarea>
+            </div>
+            <button class="btn-primary-admin" onclick="sendNewsletter()" id="nlSendBtn">📤 Send to Active Subscribers</button>
+          </div>
+        </div>
+
         <div class="admin-panel">
           <div class="admin-panel__header">
-            <h2>Newsletter Subscribers</h2>
+            <h2>Subscribers</h2>
             <button class="btn-secondary-admin" onclick="exportNewsletterCSV()">⬇ Export CSV</button>
           </div>
           <div class="admin-panel__body">
             <div class="sns-spinner" id="newsletterSpinner"></div>
             <div id="newsletterTableWrap" style="display:none">
               <div style="margin-bottom:1rem;font-family:system-ui,sans-serif;font-size:.88rem;color:var(--text-muted)">
-                Total subscribers: <strong id="subscriberCount" style="color:var(--dark)">—</strong>
+                Total active subscribers: <strong id="subscriberCount" style="color:var(--dark)">—</strong>
               </div>
               <div class="admin-table-wrap">
                 <table class="admin-table">
