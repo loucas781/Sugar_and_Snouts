@@ -1878,7 +1878,7 @@ body.admin-body[data-admin-theme="oled"] .admin-modal-section__label { color: va
 
 /* Admin tabs (category filter inside panels) */
 .admin-tabs { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1rem; border-bottom: 2px solid #f0e8e8; padding-bottom: .75rem; }
-.admin-tab { background: none; border: 1.5px solid #e5e7eb; border-radius: 6px; padding: .35rem .85rem; font-size: .82rem; font-weight: 600; cursor: pointer; font-family: system-ui, sans-serif; color: var(--text-muted); transition: all .2s; }
+.admin-tab { -webkit-appearance: none; appearance: none; background: none; border: 1.5px solid #e5e7eb; border-radius: 6px; padding: .35rem .85rem; font-size: .82rem; font-weight: 600; cursor: pointer; font-family: system-ui, sans-serif; color: var(--text-muted); transition: all .2s; }
 .admin-tab:hover { border-color: var(--pink-mid); background: var(--pink); color: var(--dark); }
 .admin-tab.active { background: var(--gold); color: var(--dark); border-color: var(--gold-dark); }
 
