@@ -1664,9 +1664,9 @@ body.admin-body[data-admin-theme="oled"] .admin-settings-tab.active { color: var
 body.admin-body[data-admin-theme="dark"] .admin-tabs,
 body.admin-body[data-admin-theme="oled"] .admin-tabs { border-bottom-color: var(--adm-bdr); }
 body.admin-body[data-admin-theme="dark"] .admin-tab,
-body.admin-body[data-admin-theme="oled"] .admin-tab { color: var(--adm-muted); border-color: var(--adm-bdr); }
+body.admin-body[data-admin-theme="oled"] .admin-tab { color: var(--adm-text2); border-color: rgba(255,255,255,.2); background: var(--adm-surface2); }
 body.admin-body[data-admin-theme="dark"] .admin-tab:hover,
-body.admin-body[data-admin-theme="oled"] .admin-tab:hover { color: var(--adm-text); border-color: var(--adm-text2); background: var(--adm-hover); }
+body.admin-body[data-admin-theme="oled"] .admin-tab:hover { color: var(--adm-text); border-color: rgba(255,255,255,.35); background: var(--adm-sw-act); }
 body.admin-body[data-admin-theme="dark"] .admin-tab.active,
 body.admin-body[data-admin-theme="oled"] .admin-tab.active { background: var(--gold); color: var(--dark); border-color: var(--gold-dark); }
 
