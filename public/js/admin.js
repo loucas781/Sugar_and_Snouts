@@ -371,7 +371,7 @@ function productCardHTML(p) {
 
   return `
     <div class="admin-product-card">
-      <span class="avail-badge ${p.isAvailable ? 'on' : 'off'}">${p.isAvailable ? 'Active' : 'Hidden'}</span>
+      ${!p.isAvailable ? `<span class="avail-badge off">Hidden</span>` : ''}
       ${img}
       <div class="admin-product-card__body">
         <div class="admin-product-card__name" title="${p.name}">${p.name}</div>
@@ -655,6 +655,7 @@ async function loadOrders() {
     wrap.style.display = ''
     tbody.innerHTML = orders.map(o => `
       <tr>
+        <td style="font-size:.8rem;color:#9ca3af;font-family:monospace">#${o.id.slice(0,8).toUpperCase()}</td>
         <td style="white-space:nowrap;font-size:.85rem">${new Date(o.created_at).toLocaleDateString('en-GB')}</td>
         <td>
           <div style="font-weight:500">${o.customer_name}</div>

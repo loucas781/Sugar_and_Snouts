@@ -1702,7 +1702,7 @@ body.admin-body[data-admin-theme="oled"] .admin-tab { color: var(--adm-text2); b
 body.admin-body[data-admin-theme="dark"] .admin-tab:hover,
 body.admin-body[data-admin-theme="oled"] .admin-tab:hover { color: var(--adm-text); border-color: rgba(255,255,255,.35); background: var(--adm-sw-act); }
 body.admin-body[data-admin-theme="dark"] .admin-tab.active,
-body.admin-body[data-admin-theme="oled"] .admin-tab.active { background: var(--gold); color: var(--dark); border-color: var(--gold-dark); }
+body.admin-body[data-admin-theme="oled"] .admin-tab.active { background: var(--pink-mid); color: var(--dark); border-color: var(--pink-mid); }
 
 /* Setting rows */
 body.admin-body[data-admin-theme="dark"] .admin-setting-row,
@@ -1795,6 +1795,22 @@ body.admin-body[data-admin-theme="dark"] .admin-alert.info,
 body.admin-body[data-admin-theme="oled"] .admin-alert.info { background: rgba(59,130,246,.12); color: #93c5fd; }
 body.admin-body[data-admin-theme="dark"] .admin-alert.warning,
 body.admin-body[data-admin-theme="oled"] .admin-alert.warning { background: rgba(217,119,6,.12); color: #fcd34d; }
+
+/* Toggle rows */
+body.admin-body[data-admin-theme="dark"] .toggle-row,
+body.admin-body[data-admin-theme="oled"] .toggle-row { border-bottom-color: var(--adm-bdr); }
+body.admin-body[data-admin-theme="dark"] .toggle-label,
+body.admin-body[data-admin-theme="oled"] .toggle-label { color: var(--adm-text2); }
+
+/* Product cards */
+body.admin-body[data-admin-theme="dark"] .admin-product-card,
+body.admin-body[data-admin-theme="oled"] .admin-product-card { background: var(--adm-surface2); border-color: var(--adm-bdr); }
+body.admin-body[data-admin-theme="dark"] .admin-product-card__name,
+body.admin-body[data-admin-theme="oled"] .admin-product-card__name { color: var(--adm-text); }
+body.admin-body[data-admin-theme="dark"] .admin-product-card__meta,
+body.admin-body[data-admin-theme="dark"] .admin-product-card__cat,
+body.admin-body[data-admin-theme="oled"] .admin-product-card__meta,
+body.admin-body[data-admin-theme="oled"] .admin-product-card__cat { color: var(--adm-muted); }
 
 /* ── Inline-style text overrides (settings descriptions, modal sections) ─────── */
 /* Descriptive <p> text throughout settings panels */
@@ -1914,7 +1930,7 @@ body.admin-body[data-admin-theme="oled"] .admin-modal-section__label { color: va
 .admin-tabs { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1rem; border-bottom: 2px solid #f0e8e8; padding-bottom: .75rem; }
 .admin-tab { -webkit-appearance: none; appearance: none; background: none; border: 1.5px solid #e5e7eb; border-radius: 6px; padding: .35rem .85rem; font-size: .82rem; font-weight: 600; cursor: pointer; font-family: system-ui, sans-serif; color: var(--text-muted); transition: all .2s; }
 .admin-tab:hover { border-color: var(--pink-mid); background: var(--pink); color: var(--dark); }
-.admin-tab.active { background: var(--gold); color: var(--dark); border-color: var(--gold-dark); }
+.admin-tab.active { background: var(--pink-mid); color: var(--dark); border-color: var(--pink-mid); }
 
 /* Product grid in admin */
 .admin-product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
