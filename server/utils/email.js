@@ -57,11 +57,17 @@ async function sendOrderConfirmation(order) {
   const baseUrl = getPref('site_url') || ''
   const trackUrl = baseUrl ? `${baseUrl}/order-status?id=${order.id}&email=${encodeURIComponent(order.customer_email)}` : ''
 
-  const pickupLine = order.pickup_slot ? `<p><strong>Pickup slot:</strong> ${order.pickup_slot}</p>` : ''
-  const dateLine   = order.order_date  ? `<p><strong>Requested date:</strong> ${order.order_date}</p>` : ''
-  const trackLine  = trackUrl ? `<p><a href="${trackUrl}" style="color:#232323">Track your order</a></p>` : ''
+  const pickupLine   = order.pickup_slot ? `<p><strong>Pickup slot:</strong> ${order.pickup_slot}</p>` : ''
+  const dateLine     = order.order_date  ? `<p><strong>Requested date:</strong> ${order.order_date}</p>` : ''
+  const trackLine    = trackUrl ? `<p><a href="${trackUrl}" style="color:#232323">Track your order</a></p>` : ''
+  const deliveryLine = order.delivery_type === 'delivery' && order.delivery_address
+    ? `<p><strong>Delivery address:</strong><br><span style="white-space:pre-line">${order.delivery_address}</span></p>`
+    : ''
   const discountLine = order.discount_amount > 0
     ? `<tr><td colspan="2" style="padding:6px 8px;text-align:right;color:#888">Discount (${order.coupon_code}):</td><td style="padding:6px 8px;text-align:right;color:#888">-£${order.discount_amount.toFixed(2)}</td></tr>`
+    : ''
+  const vatLine = order.vat_amount > 0
+    ? `<tr><td colspan="2" style="padding:6px 8px;text-align:right;color:#888">VAT:</td><td style="padding:6px 8px;text-align:right;color:#888">£${order.vat_amount.toFixed(2)}</td></tr>`
     : ''
 
   await transporter.sendMail({
@@ -76,7 +82,7 @@ async function sendOrderConfirmation(order) {
         <p>Hi ${order.customer_name},</p>
         <p>Thanks for your order! We've received it and will be in touch soon.</p>
         <p><strong>Order ID:</strong> <code style="background:#f5f5f5;padding:2px 6px;border-radius:4px">${order.id.slice(0,8).toUpperCase()}</code></p>
-        ${pickupLine}${dateLine}
+        ${pickupLine}${dateLine}${deliveryLine}
         <table style="width:100%;border-collapse:collapse;margin:16px 0">
           <thead>
             <tr style="background:#F3CDD1">
@@ -87,7 +93,7 @@ async function sendOrderConfirmation(order) {
           </thead>
           <tbody>${orderItemsHtml(items)}</tbody>
           <tfoot>
-            ${discountLine}
+            ${discountLine}${vatLine}
             <tr>
               <td colspan="2" style="padding:8px;text-align:right;font-weight:700">Total</td>
               <td style="padding:8px;text-align:right;font-weight:700">£${order.total.toFixed(2)}</td>
@@ -156,6 +162,9 @@ async function sendNewOrderNotification(order) {
         ${order.customer_phone ? `<p><strong>Phone:</strong> ${order.customer_phone}</p>` : ''}
         ${order.pickup_slot ? `<p><strong>Pickup slot:</strong> ${order.pickup_slot}</p>` : ''}
         ${order.order_date  ? `<p><strong>Requested date:</strong> ${order.order_date}</p>` : ''}
+        ${order.delivery_type === 'delivery' ? `<p><strong>Order type:</strong> 🚚 Delivery</p>` : `<p><strong>Order type:</strong> 🏪 Pickup</p>`}
+        ${order.delivery_address ? `<p><strong>Delivery address:</strong><br><span style="white-space:pre-line">${order.delivery_address}</span></p>` : ''}
+        ${order.payment_status === 'paid' ? `<p><strong>Payment:</strong> ✓ Paid (Ref: ${order.payment_reference || 'n/a'})</p>` : '<p><strong>Payment:</strong> Unpaid</p>'}
         <table style="width:100%;border-collapse:collapse;margin:12px 0">
           <thead><tr style="background:#F3CDD1"><th style="padding:6px 8px;text-align:left">Item</th><th style="padding:6px 8px;text-align:center">Qty</th><th style="padding:6px 8px;text-align:right">Total</th></tr></thead>
           <tbody>${orderItemsHtml(items)}</tbody>

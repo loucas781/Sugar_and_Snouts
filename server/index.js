@@ -240,6 +240,8 @@ app.use('/api/home-examples',  require('./routes/examples'))
 app.use('/api/coupons',        require('./routes/coupons'))
 app.use('/api/newsletter',     require('./routes/newsletter'))
 app.use('/api/pickup-slots',   require('./routes/pickup_slots'))
+app.use('/api/paypal',         require('./routes/paypal'))
+app.use('/api/reviews',        require('./routes/reviews'))
 
 // ─── Sitemap ──────────────────────────────────────────────────────────────────
 app.get('/sitemap.xml', (req, res) => {
@@ -251,7 +253,7 @@ app.get('/sitemap.xml', (req, res) => {
     AND (available_until IS NULL OR available_until >= datetime('now'))
   `).all()
 
-  const staticPages = ['', '/shop', '/contact', '/terms', '/privacy', '/order-status']
+  const staticPages = ['', '/shop', '/about', '/contact', '/terms', '/privacy', '/order-status']
   const urls = [
     ...staticPages.map(p => `  <url><loc>${baseUrl}${p}</loc><changefreq>weekly</changefreq></url>`),
     ...products.map(p => `  <url><loc>${baseUrl}/shop#product-${p.id}</loc><changefreq>weekly</changefreq></url>`),
@@ -271,6 +273,8 @@ app.get('/contact.html',     (req, res) => res.sendFile(pub('contact.html')))
 app.get('/order-status',     (req, res) => res.sendFile(pub('order-status.html')))
 app.get('/terms',            (req, res) => res.sendFile(pub('terms.html')))
 app.get('/privacy',          (req, res) => res.sendFile(pub('privacy.html')))
+app.get('/about',            (req, res) => res.sendFile(pub('about.html')))
+app.get('/about.html',       (req, res) => res.sendFile(pub('about.html')))
 app.get('/admin/setup', (req, res) => { res.set('X-Robots-Tag', 'noindex, nofollow'); res.sendFile(pub('admin/setup.html')) })
 app.get('/admin', (req, res) => {
   if (!req.originalUrl.startsWith('/admin/')) return res.redirect('/admin/')

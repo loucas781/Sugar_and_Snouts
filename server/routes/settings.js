@@ -51,7 +51,7 @@ function currentImageUrl(key) {
 }
 
 // Keys that must not be exposed to unauthenticated callers
-const PRIVATE_KEYS = new Set(['smtp_pass', 'smtp_user'])
+const PRIVATE_KEYS = new Set(['smtp_pass', 'smtp_user', 'paypal_client_secret'])
 
 // ── GET /api/settings — public settings + site image URLs ─────────────────────
 router.get('/', optionalAuth, (req, res) => {
@@ -112,6 +112,14 @@ const ALLOWED_KEYS = [
   'age_gate_text',
   // Pages
   'terms_content', 'privacy_content',
+  // About page
+  'about_title', 'about_content',
+  // PayPal
+  'paypal_enabled', 'paypal_client_id', 'paypal_client_secret', 'paypal_mode',
+  // VAT
+  'vat_enabled', 'vat_rate', 'vat_inclusive',
+  // Reviews
+  'reviews_enabled',
 ]
 
 router.put('/', requireAuth, (req, res) => {

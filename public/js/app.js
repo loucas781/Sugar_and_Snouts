@@ -198,22 +198,74 @@ function renderCartDrawer() {
 }
 
 // ── Order Modal ───────────────────────────────────────────────────────────────
-let _appliedCoupon = null
+let _appliedCoupon   = null
+let _orderSettings   = {}
+let _paypalLoaded    = false
+let _selectedDelivery = 'pickup'
+let _paypalButtons   = null
+
+function _loadPayPalSDK(clientId, currency = 'GBP') {
+  return new Promise((resolve, reject) => {
+    if (window.paypal) { resolve(); return }
+    if (_paypalLoaded) { resolve(); return }
+    _paypalLoaded = true
+    const s = document.createElement('script')
+    s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${currency}&intent=capture`
+    s.onload  = resolve
+    s.onerror = () => reject(new Error('Failed to load PayPal SDK'))
+    document.head.appendChild(s)
+  })
+}
+
+function selectDeliveryType(type) {
+  _selectedDelivery = type
+  document.querySelectorAll('.delivery-type-btn').forEach(b => b.classList.toggle('active', b.dataset.dtype === type))
+  const addrWrap = document.getElementById('orderDeliveryAddressWrap')
+  const slotWrap = document.getElementById('orderPickupSlotWrap')
+  if (addrWrap) addrWrap.style.display = type === 'delivery' ? '' : 'none'
+  if (slotWrap) slotWrap.style.display  = type === 'pickup'  ? '' : 'none'
+  renderOrderSummary()
+}
 
 async function initOrderModal() {
   const overlay = document.getElementById('orderModalOverlay')
   if (!overlay) return
 
-  // Load settings to determine pickup slots / pre-order / coupon options
   let settings = {}
   try { settings = await fetch('/api/settings').then(r => r.json()) } catch { /* no-op */ }
+  _orderSettings = settings
+
+  // Load PayPal config
+  let paypalCfg = { enabled: false, clientId: null }
+  try { paypalCfg = await fetch('/api/paypal/config').then(r => r.json()) } catch { /* no-op */ }
+  if (paypalCfg.enabled && paypalCfg.clientId) {
+    try { await _loadPayPalSDK(paypalCfg.clientId) } catch { paypalCfg.enabled = false }
+  }
 
   const btn = document.getElementById('cartCheckout')
   btn?.addEventListener('click', async () => {
     if (btn.disabled || !Cart.count() || !_shopOpen) return
     _appliedCoupon = null
+    _selectedDelivery = 'pickup'
 
-    // Inject pickup slot selector if enabled
+    // Delivery type toggle
+    const deliveryTypeWrap = document.getElementById('orderDeliveryTypeWrap')
+    if (deliveryTypeWrap) {
+      if (settings.delivery_enabled === '1') {
+        deliveryTypeWrap.innerHTML = `
+          <label class="sns-label">Order Type</label>
+          <div style="display:flex;gap:.5rem">
+            <button type="button" class="delivery-type-btn active" data-dtype="pickup" onclick="selectDeliveryType('pickup')" style="flex:1;padding:.5rem;border:2px solid var(--pink-dark);border-radius:8px;background:var(--pink);cursor:pointer;font-size:.9rem">🏪 Pickup</button>
+            <button type="button" class="delivery-type-btn" data-dtype="delivery" onclick="selectDeliveryType('delivery')" style="flex:1;padding:.5rem;border:2px solid #e2e8f0;border-radius:8px;background:#f8fafc;cursor:pointer;font-size:.9rem">🚚 Delivery</button>
+          </div>`
+        deliveryTypeWrap.style.display = ''
+      } else { deliveryTypeWrap.style.display = 'none' }
+    }
+
+    const addrWrap = document.getElementById('orderDeliveryAddressWrap')
+    if (addrWrap) addrWrap.style.display = 'none'
+
+    // Pickup slot selector
     const slotsWrap = document.getElementById('orderPickupSlotWrap')
     if (slotsWrap) {
       if (settings.pickup_slots_enabled === '1') {
@@ -221,8 +273,8 @@ async function initOrderModal() {
           const slots = await fetch('/api/pickup-slots').then(r => r.json())
           if (slots.length) {
             slotsWrap.innerHTML = `
-              <label class="order-label" for="orderPickupSlot">Pickup Slot</label>
-              <select class="order-input" id="orderPickupSlot" name="pickupSlot" required>
+              <label class="sns-label" for="orderPickupSlot">Pickup Slot</label>
+              <select class="sns-input" id="orderPickupSlot" name="pickupSlot">
                 <option value="">— Select a pickup slot —</option>
                 ${slots.map(s => `<option value="${s.id}">${s.label}</option>`).join('')}
               </select>`
@@ -241,11 +293,52 @@ async function initOrderModal() {
         const maxDate = new Date(today); maxDate.setDate(maxDate.getDate() + maxDays)
         const fmt = d => d.toISOString().split('T')[0]
         dateWrap.innerHTML = `
-          <label class="order-label" for="orderDate">Preferred Date</label>
-          <input class="order-input" type="date" id="orderDate" name="orderDate"
+          <label class="sns-label" for="orderDate">Preferred Date</label>
+          <input class="sns-input" type="date" id="orderDate" name="orderDate"
             min="${fmt(today)}" max="${fmt(maxDate)}">`
         dateWrap.style.display = ''
       } else { dateWrap.style.display = 'none' }
+    }
+
+    // PayPal buttons
+    const ppContainer = document.getElementById('paypalButtonContainer')
+    const submitBtn   = document.getElementById('orderSubmitBtn')
+    if (ppContainer) {
+      if (paypalCfg.enabled && window.paypal) {
+        if (submitBtn) submitBtn.style.display = 'none'
+        ppContainer.style.display = ''
+        ppContainer.innerHTML = ''
+        if (_paypalButtons) { try { _paypalButtons.close() } catch { /* no-op */ } }
+        _paypalButtons = window.paypal.Buttons({
+          style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'pay' },
+          createOrder: async () => {
+            const total = _calcOrderTotal()
+            const res   = await fetch('/api/paypal/create-order', {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ amount: total.toFixed(2) }),
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json.error || 'Could not create PayPal order')
+            return json.orderId
+          },
+          onApprove: async (data) => {
+            const captureRes = await fetch('/api/paypal/capture-order', {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ paypalOrderId: data.orderID }),
+            })
+            const captureJson = await captureRes.json()
+            if (!captureRes.ok) throw new Error(captureJson.error || 'Payment capture failed')
+            await _submitOrder(paypalCfg.enabled ? data.orderID : null, captureJson.captureId)
+          },
+          onError: (err) => { showToast('PayPal error: ' + (err.message || 'Please try again'), 'error') },
+        })
+        _paypalButtons.render('#paypalButtonContainer')
+      } else {
+        ppContainer.style.display = 'none'
+        if (submitBtn) submitBtn.style.display = ''
+      }
     }
 
     overlay.classList.add('open')
@@ -253,17 +346,17 @@ async function initOrderModal() {
   })
 
   document.getElementById('orderModalClose')?.addEventListener('click', () => {
-    overlay.classList.remove('open')
-    _appliedCoupon = null
+    overlay.classList.remove('open'); _appliedCoupon = null
   })
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.classList.remove('open'); _appliedCoupon = null } })
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) { overlay.classList.remove('open'); _appliedCoupon = null }
+  })
 
   // Coupon apply button
   document.getElementById('applyCouponBtn')?.addEventListener('click', async () => {
     const input = document.getElementById('couponInput')
     const code  = input?.value.trim()
     if (!code) return
-
     const applyBtn = document.getElementById('applyCouponBtn')
     applyBtn.disabled = true
     applyBtn.textContent = '...'
@@ -290,25 +383,7 @@ async function initOrderModal() {
     submitBtn.disabled = true
     submitBtn.textContent = 'Submitting…'
     try {
-      const data = new FormData(e.target)
-      const body = {
-        customerName:  data.get('name'),
-        customerEmail: data.get('email'),
-        customerPhone: data.get('phone'),
-        notes:         data.get('notes'),
-        items:         Cart.get().map(i => ({ productId: i.id, quantity: i.quantity })),
-        couponCode:    _appliedCoupon ? _appliedCoupon.code : undefined,
-        pickupSlot:    data.get('pickupSlot') || undefined,
-        orderDate:     data.get('orderDate')  || undefined,
-      }
-      const res  = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Order failed')
-      Cart.clear()
-      overlay.classList.remove('open')
-      _appliedCoupon = null
-      showToast('🎉 Order placed! We\'ll be in touch soon.', 'success')
-      e.target.reset()
+      await _submitOrder(null, null)
     } catch (err) {
       showToast(err.message, 'error')
     } finally {
@@ -318,14 +393,67 @@ async function initOrderModal() {
   })
 }
 
+function _calcOrderTotal() {
+  const settings = _orderSettings
+  const subtotal = Cart.total()
+  let discount = 0
+  if (_appliedCoupon) {
+    discount = _appliedCoupon.type === 'percentage'
+      ? Math.round(subtotal * (_appliedCoupon.value / 100) * 100) / 100
+      : Math.min(_appliedCoupon.value, subtotal)
+  }
+  let total = Math.max(0, subtotal - discount)
+  if (_selectedDelivery === 'delivery' && settings.delivery_enabled === '1') {
+    total += parseFloat(settings.delivery_fee || '0')
+  }
+  return Math.round(total * 100) / 100
+}
+
+async function _submitOrder(paypalOrderId, paypalCaptureId) {
+  const overlay = document.getElementById('orderModalOverlay')
+  const form    = document.getElementById('orderForm')
+  const data    = new FormData(form)
+
+  const deliveryAddress = document.getElementById('orderDeliveryAddress')?.value?.trim()
+  if (_selectedDelivery === 'delivery' && _orderSettings.delivery_enabled === '1' && !deliveryAddress) {
+    throw new Error('Delivery address is required')
+  }
+
+  const body = {
+    customerName:  data.get('name'),
+    customerEmail: data.get('email'),
+    customerPhone: data.get('phone'),
+    notes:         data.get('notes'),
+    items:         Cart.get().map(i => ({ productId: i.id, quantity: i.quantity })),
+    couponCode:    _appliedCoupon ? _appliedCoupon.code : undefined,
+    pickupSlot:    data.get('pickupSlot') || undefined,
+    orderDate:     data.get('orderDate')  || undefined,
+    deliveryType:  _selectedDelivery,
+    deliveryAddress: _selectedDelivery === 'delivery' ? deliveryAddress : undefined,
+    paypalOrderId:   paypalOrderId  || undefined,
+    paypalCaptureId: paypalCaptureId || undefined,
+  }
+
+  const res  = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error || 'Order failed')
+
+  Cart.clear()
+  overlay.classList.remove('open')
+  _appliedCoupon = null
+  showToast('🎉 Order placed! We\'ll be in touch soon.', 'success')
+  form.reset()
+}
+
 function renderOrderSummary() {
   const el = document.getElementById('orderSummary')
   if (!el) return
+  const settings = _orderSettings
   const items    = Cart.get()
   const subtotal = Cart.total()
 
   let discountAmount = 0
-  let discountLine = ''
+  let discountLine   = ''
   if (_appliedCoupon) {
     discountAmount = _appliedCoupon.type === 'percentage'
       ? Math.round(subtotal * (_appliedCoupon.value / 100) * 100) / 100
@@ -337,17 +465,133 @@ function renderOrderSummary() {
       </div>`
   }
 
-  const finalTotal = Math.max(0, subtotal - discountAmount)
+  let afterDiscount = Math.max(0, subtotal - discountAmount)
+
+  let deliveryLine = ''
+  if (_selectedDelivery === 'delivery' && settings.delivery_enabled === '1') {
+    const fee = parseFloat(settings.delivery_fee || '0')
+    afterDiscount = Math.round((afterDiscount + fee) * 100) / 100
+    deliveryLine = `
+      <div style="display:flex;justify-content:space-between;padding:.4rem 0;font-size:.85rem;color:#555">
+        <span>Delivery fee</span>
+        <span>${fee > 0 ? `£${fee.toFixed(2)}` : 'Free'}</span>
+      </div>`
+  }
+
+  let vatLine = ''
+  if (settings.vat_enabled === '1') {
+    const rate = parseFloat(settings.vat_rate || '20')
+    const inclusive = settings.vat_inclusive !== '0'
+    const vatAmount = inclusive
+      ? Math.round(afterDiscount * (rate / (100 + rate)) * 100) / 100
+      : Math.round(afterDiscount * (rate / 100) * 100) / 100
+    if (!inclusive) afterDiscount = Math.round((afterDiscount + vatAmount) * 100) / 100
+    vatLine = `
+      <div style="display:flex;justify-content:space-between;padding:.4rem 0;font-size:.82rem;color:#888">
+        <span>VAT (${rate}%${inclusive ? ' incl.' : ''})</span>
+        <span>£${vatAmount.toFixed(2)}</span>
+      </div>`
+  }
 
   el.innerHTML = items.map(i => `
     <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid #f0f0f0;font-size:.9rem">
       <span>${i.name} × ${i.quantity}</span>
       <span>£${(i.price * i.quantity).toFixed(2)}</span>
     </div>`).join('')
-    + discountLine
+    + discountLine + deliveryLine + vatLine
     + `<div style="display:flex;justify-content:space-between;padding:.7rem 0;font-weight:700">
-      <span>Total</span><span>£${finalTotal.toFixed(2)}</span>
+      <span>Total</span><span>£${afterDiscount.toFixed(2)}</span>
     </div>`
+}
+
+// ── Product Reviews ───────────────────────────────────────────────────────────
+let _reviewProductId  = null
+let _reviewStarRating = 0
+
+function toggleReviewForm() {
+  const form = document.getElementById('pdReviewForm')
+  if (!form) return
+  const visible = form.style.display !== 'none'
+  form.style.display = visible ? 'none' : ''
+  if (!visible) {
+    document.getElementById('reviewName').value    = ''
+    document.getElementById('reviewEmail').value   = ''
+    document.getElementById('reviewComment').value = ''
+    setReviewStars(0)
+    const msg = document.getElementById('reviewFormMsg')
+    if (msg) msg.style.display = 'none'
+  }
+}
+
+function setReviewStars(n) {
+  _reviewStarRating = n
+  document.querySelectorAll('#reviewStarPicker span').forEach((s, i) => {
+    s.textContent = i < n ? '★' : '☆'
+    s.style.color = i < n ? '#f59e0b' : '#d1d5db'
+  })
+}
+
+async function loadProductReviews(productId) {
+  _reviewProductId = productId
+  const section = document.getElementById('pdReviewsSection')
+  const list    = document.getElementById('pdReviewsList')
+  const avgEl   = document.getElementById('pdReviewsAvg')
+  if (!section || !list) return
+
+  try {
+    const data = await fetch(`/api/reviews/${productId}`).then(r => r.json())
+    if (data.count === 0) {
+      list.innerHTML = '<p style="font-size:.85rem;color:#9ca3af;margin:0">No reviews yet — be the first!</p>'
+      if (avgEl) avgEl.textContent = ''
+    } else {
+      if (avgEl) avgEl.textContent = `${'★'.repeat(Math.round(data.avgRating))} ${data.avgRating} (${data.count})`
+      list.innerHTML = data.reviews.map(r => `
+        <div style="padding:.6rem 0;border-bottom:1px solid #f5f5f5">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
+            <span style="color:#f59e0b">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span>
+            <strong style="font-size:.85rem">${r.customer_name}</strong>
+            <span style="font-size:.75rem;color:#9ca3af">${new Date(r.created_at).toLocaleDateString('en-GB')}</span>
+          </div>
+          ${r.comment ? `<p style="margin:0;font-size:.85rem;color:#374151">${r.comment}</p>` : ''}
+        </div>`).join('')
+    }
+    section.style.display = ''
+  } catch { section.style.display = 'none' }
+
+  // Star picker events
+  document.querySelectorAll('#reviewStarPicker span').forEach((s, i) => {
+    s.addEventListener('click',      () => setReviewStars(i + 1))
+    s.addEventListener('mouseenter', () => document.querySelectorAll('#reviewStarPicker span').forEach((x, j) => { x.textContent = j <= i ? '★' : '☆'; x.style.color = j <= i ? '#f59e0b' : '#d1d5db' }))
+    s.addEventListener('mouseleave', () => setReviewStars(_reviewStarRating))
+  })
+}
+
+async function submitReview() {
+  const msg = document.getElementById('reviewFormMsg')
+  if (!_reviewProductId) return
+  const name    = document.getElementById('reviewName')?.value.trim()
+  const email   = document.getElementById('reviewEmail')?.value.trim()
+  const comment = document.getElementById('reviewComment')?.value.trim()
+  if (!name || !email || !_reviewStarRating) {
+    if (msg) { msg.style.display = ''; msg.style.color = '#991b1b'; msg.textContent = 'Please fill in your name, email, and rating.' }
+    return
+  }
+  try {
+    const res  = await fetch(`/api/reviews/${_reviewProductId}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ customerName: name, customerEmail: email, rating: _reviewStarRating, comment }),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error)
+    if (msg) { msg.style.display = ''; msg.style.color = '#065f46'; msg.textContent = json.message }
+    document.getElementById('reviewName').value    = ''
+    document.getElementById('reviewEmail').value   = ''
+    document.getElementById('reviewComment').value = ''
+    setReviewStars(0)
+  } catch (err) {
+    if (msg) { msg.style.display = ''; msg.style.color = '#991b1b'; msg.textContent = err.message }
+  }
 }
 
 // ── Admin nav link ────────────────────────────────────────────────────────────

@@ -237,6 +237,13 @@ function openProductDetail(p) {
   }
 
   document.getElementById('productDetailOverlay').classList.add('open')
+
+  // Load reviews if function is available
+  if (typeof loadProductReviews === 'function') {
+    const form = document.getElementById('pdReviewForm')
+    if (form) form.style.display = 'none'
+    loadProductReviews(p.id)
+  }
 }
 
 function closeProductDetail() {

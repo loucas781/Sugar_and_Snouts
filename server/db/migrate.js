@@ -176,6 +176,18 @@ function migrate() {
       optin_at  TEXT NOT NULL DEFAULT (datetime('now')),
       is_active INTEGER NOT NULL DEFAULT 1
     );
+
+    -- Product Reviews
+    CREATE TABLE IF NOT EXISTS product_reviews (
+      id             TEXT PRIMARY KEY,
+      product_id     TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      customer_name  TEXT NOT NULL,
+      customer_email TEXT NOT NULL,
+      rating         INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      comment        TEXT,
+      is_approved    INTEGER NOT NULL DEFAULT 0,
+      created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `)
 
   // Safe column additions for existing DBs (idempotent)
@@ -257,6 +269,26 @@ function migrate() {
     db.exec('ALTER TABLE orders ADD COLUMN order_date TEXT')
     console.log('  ✓  Added column orders.order_date')
   }
+  if (!orderCols.includes('payment_reference')) {
+    db.exec('ALTER TABLE orders ADD COLUMN payment_reference TEXT')
+    console.log('  ✓  Added column orders.payment_reference')
+  }
+  if (!orderCols.includes('payment_status')) {
+    db.exec("ALTER TABLE orders ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'unpaid'")
+    console.log('  ✓  Added column orders.payment_status')
+  }
+  if (!orderCols.includes('delivery_address')) {
+    db.exec('ALTER TABLE orders ADD COLUMN delivery_address TEXT')
+    console.log('  ✓  Added column orders.delivery_address')
+  }
+  if (!orderCols.includes('delivery_type')) {
+    db.exec("ALTER TABLE orders ADD COLUMN delivery_type TEXT NOT NULL DEFAULT 'pickup'")
+    console.log('  ✓  Added column orders.delivery_type')
+  }
+  if (!orderCols.includes('vat_amount')) {
+    db.exec('ALTER TABLE orders ADD COLUMN vat_amount REAL NOT NULL DEFAULT 0')
+    console.log('  ✓  Added column orders.vat_amount')
+  }
 
   // Seed default product categories if none exist
   const catCount = db.prepare('SELECT COUNT(*) as c FROM product_categories').get()
@@ -318,6 +350,19 @@ function migrate() {
     // Pages
     ['terms_content',             ''],
     ['privacy_content',           ''],
+    // About page
+    ['about_title',               'Our Story'],
+    ['about_content',             ''],
+    // PayPal
+    ['paypal_enabled',            '0'],
+    ['paypal_client_id',          ''],
+    ['paypal_mode',               'sandbox'],
+    // VAT
+    ['vat_enabled',               '0'],
+    ['vat_rate',                  '20'],
+    ['vat_inclusive',             '1'],
+    // Reviews
+    ['reviews_enabled',           '1'],
   ]
   const insertPref = db.prepare("INSERT OR IGNORE INTO app_preferences (key, value) VALUES (?, ?)")
   defaults.forEach(([k, v]) => insertPref.run(k, v))

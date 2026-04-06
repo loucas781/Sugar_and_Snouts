@@ -103,7 +103,7 @@ function switchTab(name) {
   const btn  = document.querySelector(`[data-tab="${name}"]`)
   if (pane) pane.classList.add('active')
   if (btn)  btn.classList.add('active')
-  const titles = { overview: 'Overview', analytics: 'Analytics', products: 'Products', orders: 'Orders', coupons: 'Coupons', messages: 'Messages', newsletter: 'Newsletter', users: 'Users', settings: 'Settings' }
+  const titles = { overview: 'Overview', analytics: 'Analytics', products: 'Products', orders: 'Orders', coupons: 'Coupons', messages: 'Messages', newsletter: 'Newsletter', reviews: 'Reviews', users: 'Users', settings: 'Settings' }
   const titleEl = document.getElementById('topbarTitle')
   if (titleEl) titleEl.textContent = titles[name] || name
 
@@ -114,6 +114,7 @@ function switchTab(name) {
   if (name === 'analytics')  loadAnalytics(7)
   if (name === 'coupons')    loadCoupons()
   if (name === 'newsletter') loadNewsletterSubscribers()
+  if (name === 'reviews')   loadReviews('pending')
   if (name === 'settings') {
     // Load the currently active settings sub-tab's data
     const active = document.querySelector('#tab-settings [data-stab].active')
@@ -142,7 +143,10 @@ function loadSettingsSubTab(name) {
   if (name === 'contact')  { loadContactSettings(); loadEmailNotifSettings(); loadSmtpSettings() }
   if (name === 'hours')    loadHoursSettings()
   if (name === 'seo')      { loadSeoSettings(); loadAnalyticsSettings() }
+  if (name === 'payments') loadPaypalSettings()
+  if (name === 'vat')      loadVatSettings()
   if (name === 'pages')    { loadTermsContent(); loadPrivacyContent() }
+  if (name === 'about')    loadAboutContent()
   if (name === 'system')   loadBuildInfo()
   // account tab has no async data to load
 }
@@ -682,6 +686,14 @@ function openOrder(id) {
           <span style="color:#9ca3af">Email</span><a href="mailto:${o.customer_email}">${o.customer_email}</a>
           ${o.customer_phone ? `<span style="color:#9ca3af">Phone</span><span>${o.customer_phone}</span>` : ''}
           <span style="color:#9ca3af">Date</span><span>${new Date(o.created_at).toLocaleString('en-GB')}</span>
+          ${o.order_date  ? `<span style="color:#9ca3af">Requested</span><span>${o.order_date}</span>` : ''}
+          ${o.pickup_slot ? `<span style="color:#9ca3af">Pickup Slot</span><span>${o.pickup_slot}</span>` : ''}
+          <span style="color:#9ca3af">Order Type</span><span>${(o.delivery_type || 'pickup') === 'delivery' ? '🚚 Delivery' : '🏪 Pickup'}</span>
+          ${o.delivery_address ? `<span style="color:#9ca3af">Delivery To</span><span style="white-space:pre-line">${o.delivery_address}</span>` : ''}
+          <span style="color:#9ca3af">Payment</span><span class="status-badge ${o.payment_status === 'paid' ? 'status-active' : 'status-inactive'}">${o.payment_status === 'paid' ? '✓ Paid' : 'Unpaid'}</span>
+          ${o.payment_reference ? `<span style="color:#9ca3af">Ref</span><code style="font-size:.78rem">${o.payment_reference}</code>` : ''}
+          ${o.discount_amount > 0 ? `<span style="color:#9ca3af">Discount</span><span style="color:#22c55e">−£${parseFloat(o.discount_amount).toFixed(2)}</span>` : ''}
+          ${o.vat_amount > 0 ? `<span style="color:#9ca3af">VAT</span><span>£${parseFloat(o.vat_amount).toFixed(2)}</span>` : ''}
           <span style="color:#9ca3af">Total</span><strong>£${parseFloat(o.total).toFixed(2)}</strong>
         </div>
         <div style="border:1px solid #e5e7eb;border-radius:8px;padding:.8rem;margin-bottom:1.2rem">
@@ -2182,6 +2194,185 @@ function clearAdminCache() {
   }
   showToast('Cache cleared — reloading…', 'success')
   setTimeout(() => window.location.reload(true), 800)
+}
+
+// ── Reviews ───────────────────────────────────────────────────────────────────
+let _reviewFilter = 'pending'
+
+async function loadReviews(filter) {
+  _reviewFilter = filter || 'pending'
+  document.querySelectorAll('#tab-reviews .admin-tab').forEach(b => b.classList.remove('active'))
+  const activeBtn = document.getElementById(`reviewFilter${_reviewFilter.charAt(0).toUpperCase() + _reviewFilter.slice(1)}`)
+  if (activeBtn) activeBtn.classList.add('active')
+
+  const spinner = document.getElementById('reviewsSpinner')
+  const wrap    = document.getElementById('reviewsTableWrap')
+  const empty   = document.getElementById('reviewsEmpty')
+  if (spinner) spinner.style.display = ''
+  if (wrap)    wrap.style.display = 'none'
+  if (empty)   empty.style.display = 'none'
+
+  try {
+    const qs = _reviewFilter === 'all' ? '' : _reviewFilter === 'pending' ? '?approved=0' : '?approved=1'
+    const reviews = await fetch(`/api/reviews/admin/all${qs}`).then(r => r.json())
+
+    const badge = document.getElementById('pendingReviewsBadge')
+    if (badge && _reviewFilter === 'pending') {
+      badge.textContent  = reviews.length
+      badge.style.display = reviews.length > 0 ? '' : 'none'
+    }
+
+    if (!reviews.length) { if (empty) empty.style.display = ''; return }
+
+    const tbody = document.getElementById('reviewsBody')
+    if (tbody) {
+      tbody.innerHTML = reviews.map(r => `<tr>
+        <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.product_name}">${r.product_name}</td>
+        <td>${r.customer_name}</td>
+        <td style="color:#f59e0b">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.comment || ''}">${r.comment || '<span style="color:#9ca3af">—</span>'}</td>
+        <td class="td-muted">${new Date(r.created_at).toLocaleDateString('en-GB')}</td>
+        <td><span class="status-badge ${r.is_approved ? 'status-active' : 'status-inactive'}">${r.is_approved ? 'Approved' : 'Pending'}</span></td>
+        <td class="td-actions">
+          ${!r.is_approved ? `<button class="btn-admin-icon" onclick="approveReview('${r.id}')" title="Approve">✓</button>` : `<button class="btn-admin-icon" onclick="unapproveReview('${r.id}')" title="Unapprove">↩</button>`}
+          <button class="btn-admin-icon danger" onclick="deleteReview('${r.id}')" title="Delete">🗑️</button>
+        </td>
+      </tr>`).join('')
+    }
+    if (wrap) wrap.style.display = ''
+  } catch { showToast('Could not load reviews', 'error') }
+  finally { if (spinner) spinner.style.display = 'none' }
+}
+
+async function approveReview(id) {
+  try {
+    const res = await fetch(`/api/reviews/admin/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isApproved: true }) })
+    if (!res.ok) throw new Error('Failed')
+    showToast('Review approved', 'success')
+    loadReviews(_reviewFilter)
+  } catch { showToast('Could not approve review', 'error') }
+}
+
+async function unapproveReview(id) {
+  try {
+    const res = await fetch(`/api/reviews/admin/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isApproved: false }) })
+    if (!res.ok) throw new Error('Failed')
+    showToast('Review unapproved', 'success')
+    loadReviews(_reviewFilter)
+  } catch { showToast('Could not unapprove review', 'error') }
+}
+
+async function deleteReview(id) {
+  if (!confirm('Delete this review?')) return
+  try {
+    const res = await fetch(`/api/reviews/admin/${id}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error('Failed')
+    showToast('Review deleted', 'success')
+    loadReviews(_reviewFilter)
+  } catch { showToast('Could not delete review', 'error') }
+}
+
+// ── Orders CSV Export ─────────────────────────────────────────────────────────
+function exportOrdersCSV() {
+  const status = document.getElementById('orderStatusFilter')?.value || ''
+  const qs = status ? `?status=${encodeURIComponent(status)}` : ''
+  window.location.href = `/api/orders/admin/export${qs}`
+}
+
+// ── PayPal Settings ───────────────────────────────────────────────────────────
+async function loadPaypalSettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const el = id => document.getElementById(id)
+    if (el('settingPaypalEnabled'))   el('settingPaypalEnabled').checked   = s.paypal_enabled === '1'
+    if (el('settingPaypalClientId'))  el('settingPaypalClientId').value    = s.paypal_client_id || ''
+    if (el('settingPaypalMode'))      el('settingPaypalMode').value        = s.paypal_mode || 'sandbox'
+    // Never pre-fill secret field
+  } catch { /* no-op */ }
+}
+
+async function savePaypalSettings() {
+  const al = document.getElementById('paypalAlert')
+  al.style.display = 'none'
+  const body = {
+    paypal_enabled:   document.getElementById('settingPaypalEnabled')?.checked ? '1' : '0',
+    paypal_client_id: document.getElementById('settingPaypalClientId')?.value.trim() || '',
+    paypal_mode:      document.getElementById('settingPaypalMode')?.value || 'sandbox',
+  }
+  const secret = document.getElementById('settingPaypalClientSecret')?.value
+  if (secret) body.paypal_client_secret = secret
+  try {
+    const res  = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    if (secret) document.getElementById('settingPaypalClientSecret').value = ''
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ PayPal settings saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── VAT Settings ──────────────────────────────────────────────────────────────
+async function loadVatSettings() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const el = id => document.getElementById(id)
+    if (el('settingVatEnabled'))   el('settingVatEnabled').checked   = s.vat_enabled === '1'
+    if (el('settingVatRate'))      el('settingVatRate').value        = s.vat_rate || '20'
+    if (el('settingVatInclusive')) el('settingVatInclusive').checked = s.vat_inclusive !== '0'
+  } catch { /* no-op */ }
+}
+
+async function saveVatSettings() {
+  const al = document.getElementById('vatAlert')
+  al.style.display = 'none'
+  const body = {
+    vat_enabled:   document.getElementById('settingVatEnabled')?.checked   ? '1' : '0',
+    vat_rate:      document.getElementById('settingVatRate')?.value        || '20',
+    vat_inclusive: document.getElementById('settingVatInclusive')?.checked ? '1' : '0',
+  }
+  try {
+    const res  = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ VAT settings saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
+}
+
+// ── About Page Settings ───────────────────────────────────────────────────────
+async function loadAboutContent() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json())
+    const titleEl   = document.getElementById('settingAboutTitle')
+    const contentEl = document.getElementById('settingAboutContent')
+    if (titleEl)   titleEl.value   = s.about_title   || 'Our Story'
+    if (contentEl) contentEl.value = s.about_content || ''
+  } catch { /* no-op */ }
+}
+
+async function saveAboutContent() {
+  const al = document.getElementById('aboutAlert')
+  al.style.display = 'none'
+  const body = {
+    about_title:   document.getElementById('settingAboutTitle')?.value   || 'Our Story',
+    about_content: document.getElementById('settingAboutContent')?.value || '',
+  }
+  try {
+    const res  = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    al.style.cssText = 'display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✓ About page saved'
+  } catch (err) {
+    al.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;border-radius:8px;padding:.7rem 1rem;font-size:.9rem'
+    al.textContent = '✗ ' + err.message
+  }
 }
 
 // ── Admin Theme ───────────────────────────────────────────────────────────────

@@ -33,6 +33,7 @@
       <ul class="navbar-nav ms-auto align-items-center gap-1">
         <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
         <li class="nav-item"><a class="nav-link active" href="/shop">Shop</a></li>
+        <li class="nav-item"><a class="nav-link" href="/about">About</a></li>
         <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
         <li class="nav-item ms-lg-2">
           <button class="cart-btn" data-cart-open>
@@ -89,6 +90,7 @@
         <div class="row mb-3">
           <div class="col"><a href="/"              class="a-btn footer-link ltc-6728">Home</a></div>
           <div class="col"><a href="/shop"           class="a-btn footer-link ltc-6728">Shop</a></div>
+          <div class="col"><a href="/about"          class="a-btn footer-link ltc-6728">About</a></div>
           <div class="col"><a href="/contact"        class="a-btn footer-link ltc-6728">Contact</a></div>
           <div class="col"><a href="/order-status"   class="a-btn footer-link ltc-6728">Track Order</a></div>
           <div class="col"><a href="/terms"          class="a-btn footer-link ltc-6728">Terms</a></div>
@@ -148,6 +150,43 @@
 
       <div class="pd-limit" id="pdLimit" style="display:none"></div>
       <div class="pd-lowstock" id="pdLowStock" style="display:none"></div>
+
+      <!-- Reviews section -->
+      <div id="pdReviewsSection" style="display:none;margin-top:1.5rem;border-top:1px solid #f0f0f0;padding-top:1rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+          <div>
+            <strong style="font-size:.95rem">Customer Reviews</strong>
+            <span id="pdReviewsAvg" style="margin-left:.5rem;color:#f59e0b;font-size:.9rem"></span>
+          </div>
+          <button class="btn-sns-outline" style="font-size:.8rem;padding:.3rem .7rem" onclick="toggleReviewForm()">+ Write a Review</button>
+        </div>
+        <div id="pdReviewsList" style="max-height:200px;overflow-y:auto"></div>
+
+        <!-- Write review form -->
+        <div id="pdReviewForm" style="display:none;margin-top:1rem;padding:1rem;background:#fafafa;border-radius:10px">
+          <div style="font-size:.9rem;font-weight:600;margin-bottom:.75rem">Leave a Review</div>
+          <div class="sns-form-group" style="margin-bottom:.75rem">
+            <label class="sns-label" style="font-size:.8rem">Your Name *</label>
+            <input type="text" id="reviewName" class="sns-input" style="font-size:.85rem" placeholder="Jane Smith">
+          </div>
+          <div class="sns-form-group" style="margin-bottom:.75rem">
+            <label class="sns-label" style="font-size:.8rem">Email *</label>
+            <input type="email" id="reviewEmail" class="sns-input" style="font-size:.85rem" placeholder="jane@example.com">
+          </div>
+          <div class="sns-form-group" style="margin-bottom:.75rem">
+            <label class="sns-label" style="font-size:.8rem">Rating *</label>
+            <div id="reviewStarPicker" style="display:flex;gap:.25rem;font-size:1.5rem;cursor:pointer">
+              <span data-star="1">☆</span><span data-star="2">☆</span><span data-star="3">☆</span><span data-star="4">☆</span><span data-star="5">☆</span>
+            </div>
+          </div>
+          <div class="sns-form-group" style="margin-bottom:.75rem">
+            <label class="sns-label" style="font-size:.8rem">Comment</label>
+            <textarea id="reviewComment" class="sns-textarea" rows="2" style="font-size:.85rem" placeholder="Tell us what you think…"></textarea>
+          </div>
+          <div id="reviewFormMsg" style="display:none;font-size:.82rem;margin-bottom:.5rem"></div>
+          <button class="btn-sns-primary" style="font-size:.85rem;padding:.4rem 1rem" onclick="submitReview()">Submit Review</button>
+        </div>
+      </div>
     </div>
     <div class="sns-modal__footer">
       <button class="btn-sns-secondary" id="productDetailCancel">Close</button>
@@ -209,6 +248,13 @@
           <label class="sns-label">Phone Number</label>
           <input type="tel" name="phone" class="sns-input" placeholder="07700 900000">
         </div>
+        <!-- Delivery type toggle (injected dynamically if delivery enabled) -->
+        <div id="orderDeliveryTypeWrap" style="display:none" class="sns-form-group"></div>
+        <!-- Delivery address (shown when delivery type is selected) -->
+        <div id="orderDeliveryAddressWrap" style="display:none" class="sns-form-group">
+          <label class="sns-label">Delivery Address *</label>
+          <textarea name="deliveryAddress" id="orderDeliveryAddress" class="sns-textarea" rows="3" placeholder="Full delivery address including postcode"></textarea>
+        </div>
         <!-- Pickup slot (injected dynamically if enabled) -->
         <div id="orderPickupSlotWrap" style="display:none" class="sns-form-group"></div>
         <!-- Pre-order date (injected dynamically if max_days_ahead > 0) -->
@@ -217,8 +263,10 @@
           <label class="sns-label">Notes / Allergies</label>
           <textarea name="notes" class="sns-textarea" placeholder="Any dietary requirements, allergies, or special requests…"></textarea>
         </div>
-        <button type="submit" class="btn-sns-primary w-100">Place Order</button>
+        <button type="submit" class="btn-sns-primary w-100" id="orderSubmitBtn">Place Order</button>
       </form>
+      <!-- PayPal button container (shown instead of form submit when PayPal is enabled) -->
+      <div id="paypalButtonContainer" style="display:none;margin-top:1rem"></div>
     </div>
   </div>
 </div>

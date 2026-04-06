@@ -72,6 +72,10 @@
           <button class="admin-nav-item" data-tab="newsletter">
             <span class="admin-nav-item__icon">📧</span> Newsletter
           </button>
+          <button class="admin-nav-item" data-tab="reviews">
+            <span class="admin-nav-item__icon">⭐</span> Reviews
+            <span class="admin-nav-badge" id="pendingReviewsBadge" style="display:none">0</span>
+          </button>
         </div>
       </div>
 
@@ -175,14 +179,17 @@
         <div class="admin-panel">
           <div class="admin-panel__header">
             <h2>Orders</h2>
-            <select class="admin-select-field" id="orderStatusFilter" style="max-width:160px">
-              <option value="">All statuses</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="ready">Ready</option>
-              <option value="collected">Collected</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+            <div style="display:flex;gap:.5rem;align-items:center">
+              <button class="btn-secondary-admin" onclick="exportOrdersCSV()" style="font-size:.8rem;padding:.3rem .7rem">⬇ Export CSV</button>
+              <select class="admin-select-field" id="orderStatusFilter" style="max-width:160px">
+                <option value="">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="ready">Ready</option>
+                <option value="collected">Collected</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
           </div>
           <div class="admin-panel__body">
             <div class="sns-spinner" id="ordersSpinner"></div>
@@ -268,6 +275,43 @@
             <div id="couponsEmpty" style="display:none;text-align:center;padding:3rem;color:var(--text-muted)">
               <div style="font-size:3rem;margin-bottom:1rem">🎟</div>
               <p>No coupons yet. Create your first discount code!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Reviews Tab ───────────────────────────────────────────────────── -->
+      <div class="admin-tab-pane" id="tab-reviews">
+        <div class="admin-panel">
+          <div class="admin-panel__header">
+            <h2>Customer Reviews</h2>
+            <div style="display:flex;gap:.5rem">
+              <button class="admin-tab active" id="reviewFilterPending" onclick="loadReviews('pending')">Pending</button>
+              <button class="admin-tab" id="reviewFilterApproved" onclick="loadReviews('approved')">Approved</button>
+              <button class="admin-tab" id="reviewFilterAll" onclick="loadReviews('all')">All</button>
+            </div>
+          </div>
+          <div class="admin-panel__body">
+            <div class="sns-spinner" id="reviewsSpinner"></div>
+            <div class="admin-table-wrap" id="reviewsTableWrap" style="display:none">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Customer</th>
+                    <th>Rating</th>
+                    <th>Comment</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="reviewsBody"></tbody>
+              </table>
+            </div>
+            <div id="reviewsEmpty" style="display:none;text-align:center;padding:3rem;color:var(--text-muted)">
+              <div style="font-size:3rem;margin-bottom:1rem">⭐</div>
+              <p>No reviews found.</p>
             </div>
           </div>
         </div>
@@ -380,7 +424,10 @@
           <button class="admin-tab"        data-stab="contact"   onclick="switchSettingsTab('contact')">📞 Contact</button>
           <button class="admin-tab"        data-stab="hours"     onclick="switchSettingsTab('hours')">🕐 Hours</button>
           <button class="admin-tab"        data-stab="seo"       onclick="switchSettingsTab('seo')">🔍 SEO</button>
+          <button class="admin-tab"        data-stab="payments"  onclick="switchSettingsTab('payments')">💳 Payments</button>
+          <button class="admin-tab"        data-stab="vat"       onclick="switchSettingsTab('vat')">🧾 VAT</button>
           <button class="admin-tab"        data-stab="pages"     onclick="switchSettingsTab('pages')">📄 Pages</button>
+          <button class="admin-tab"        data-stab="about"     onclick="switchSettingsTab('about')">📖 About Page</button>
           <button class="admin-tab"        data-stab="account"   onclick="switchSettingsTab('account')">🔐 Account</button>
           <button class="admin-tab"        data-stab="system"    onclick="switchSettingsTab('system')">🔧 System</button>
         </div>
@@ -610,7 +657,7 @@
             <div class="admin-panel__header"><h2>Delivery</h2></div>
             <div class="admin-panel__body">
               <div id="deliveryAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
-              <p style="font-size:.85rem;color:#6b7280;margin-bottom:1rem">If enabled, the order form will display delivery information. No address is collected — this is informational only.</p>
+              <p style="font-size:.85rem;color:#6b7280;margin-bottom:1rem">If enabled, customers can choose between Pickup and Delivery when placing an order. A delivery address will be collected and shown in the order details.</p>
               <div class="toggle-row" style="margin-bottom:1rem">
                 <span class="toggle-label">Delivery Available</span>
                 <label class="toggle-switch"><input type="checkbox" id="settingDeliveryEnabled"><span class="toggle-slider"></span></label>
@@ -806,6 +853,83 @@
                 <textarea id="settingPrivacyContent" class="admin-textarea-field" rows="14" placeholder="&lt;h2&gt;What data we collect&lt;/h2&gt;&#10;&lt;p&gt;We collect...&lt;/p&gt;"></textarea>
               </div>
               <button class="btn-primary-admin" onclick="savePrivacyContent()">Save Privacy Content</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Payments (PayPal) ── -->
+        <div class="settings-sub-pane" id="stab-payments">
+          <div class="admin-panel" style="max-width:520px">
+            <div class="admin-panel__header"><h2>PayPal Payments</h2></div>
+            <div class="admin-panel__body">
+              <div id="paypalAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <p style="font-size:.85rem;color:#6b7280;margin-bottom:1rem">Connect your PayPal Business account to accept payments online. Customers can pay via PayPal, Apple Pay, Google Pay, and card.</p>
+              <div class="toggle-row" style="margin-bottom:1rem">
+                <span class="toggle-label">Enable PayPal Payments</span>
+                <label class="toggle-switch"><input type="checkbox" id="settingPaypalEnabled"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">PayPal Client ID</label>
+                <input type="text" id="settingPaypalClientId" class="admin-input-field" placeholder="AaBbCcDd…">
+                <div style="font-size:.75rem;color:#9ca3af;margin-top:.3rem">Found in your PayPal Developer Dashboard under Apps &amp; Credentials.</div>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">PayPal Client Secret</label>
+                <input type="password" id="settingPaypalClientSecret" class="admin-input-field" placeholder="Leave blank to keep existing">
+                <div style="font-size:.75rem;color:#9ca3af;margin-top:.3rem">Required for server-side payment verification. Never shared publicly.</div>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Mode</label>
+                <select id="settingPaypalMode" class="admin-select-field">
+                  <option value="sandbox">Sandbox (testing)</option>
+                  <option value="live">Live (production)</option>
+                </select>
+              </div>
+              <button class="btn-primary-admin" onclick="savePaypalSettings()">Save PayPal Settings</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── VAT ── -->
+        <div class="settings-sub-pane" id="stab-vat">
+          <div class="admin-panel" style="max-width:480px">
+            <div class="admin-panel__header"><h2>VAT / Tax</h2></div>
+            <div class="admin-panel__body">
+              <div id="vatAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <div class="toggle-row" style="margin-bottom:1rem">
+                <span class="toggle-label">Enable VAT</span>
+                <label class="toggle-switch"><input type="checkbox" id="settingVatEnabled"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">VAT Rate (%)</label>
+                <input type="number" id="settingVatRate" class="admin-input-field" min="0" max="100" step="0.1" placeholder="20">
+              </div>
+              <div class="toggle-row" style="margin-bottom:1rem">
+                <span class="toggle-label">Prices include VAT (inclusive)</span>
+                <label class="toggle-switch"><input type="checkbox" id="settingVatInclusive"><span class="toggle-slider"></span></label>
+              </div>
+              <p style="font-size:.82rem;color:#6b7280;margin-bottom:1rem">If inclusive, VAT is extracted from the price shown. If exclusive, VAT is added on top at checkout.</p>
+              <button class="btn-primary-admin" onclick="saveVatSettings()">Save VAT Settings</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── About Page ── -->
+        <div class="settings-sub-pane" id="stab-about">
+          <div class="admin-panel" style="max-width:700px">
+            <div class="admin-panel__header"><h2>About Page</h2></div>
+            <div class="admin-panel__body">
+              <div id="aboutAlert" style="display:none;margin-bottom:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.9rem"></div>
+              <p style="font-size:.85rem;color:#6b7280;margin-bottom:1rem">Write your bakery's story. Displayed at <strong>/about</strong>. Supports plain text with paragraph breaks.</p>
+              <div class="admin-form-group">
+                <label class="admin-label">Page Title</label>
+                <input type="text" id="settingAboutTitle" class="admin-input-field" placeholder="Our Story">
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-label">Content</label>
+                <textarea id="settingAboutContent" class="admin-textarea-field" rows="14" placeholder="Tell your story here. Use blank lines to separate paragraphs."></textarea>
+              </div>
+              <button class="btn-primary-admin" onclick="saveAboutContent()">Save About Page</button>
             </div>
           </div>
         </div>
